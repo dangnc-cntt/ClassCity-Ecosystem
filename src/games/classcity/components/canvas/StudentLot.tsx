@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { AssetService } from '../../../../platform/assets/assetService';
 import type { Lot } from '../../config/cityLayout';
 import { useClassStore } from '../../state/useClassStore';
+import { Avatar3D } from './Avatar3D';
 import { getProceduralShopHeight } from './ShopProcedural';
 import { ShopModel } from './ShopModel';
 
@@ -74,16 +75,22 @@ export function StudentLot({
     isSelected,
     isHovered,
     isCalled,
+    jumpTimestamp,
     selectStudent,
     setHoveredLotId,
   } = useClassStore(
     useShallow((state) => {
       const found = state.students.find((s) => s.id === studentId);
+      const lastAward = state.lastAwardedStudent;
       return {
         student: found,
         isSelected: state.selectedStudentId === studentId,
         isHovered: state.hoveredLotId === lot.id,
         isCalled: state.calledStudentId === studentId,
+        jumpTimestamp:
+          lastAward && lastAward.studentId === studentId
+            ? lastAward.timestamp
+            : 0,
         selectStudent: state.selectStudent,
         setHoveredLotId: state.setHoveredLotId,
       };
@@ -128,6 +135,18 @@ export function StudentLot({
           color={student.shopColor}
           assets={assets}
           castShadow={castShadow}
+        />
+
+        <Avatar3D
+          studentId={student.id}
+          avatarId={student.equippedAvatarId}
+          patrolA={lot.sidewalkPatrol.a}
+          patrolB={lot.sidewalkPatrol.b}
+          lotPosition={lot.position}
+          lotRotationY={lot.rotationY}
+          jumpTriggerTimestamp={jumpTimestamp}
+          isCalled={isCalled}
+          assets={assets}
         />
 
         {/* Optimized HTML label: no backdrop-filter/blur, pointer-events:none (Rule 8.4) */}

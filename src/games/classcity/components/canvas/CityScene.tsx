@@ -1,27 +1,66 @@
-import { useEffect, useState } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 import { useShallow } from 'zustand/react/shallow';
 import type { AssetService } from '../../../../platform/assets/assetService';
+import type { SoundEffectsService } from '../../../../platform/audio/soundEffects';
 import type { TelemetryPort } from '../../../../platform/ports/telemetry';
 import { PerfGovernor } from '../../../../three-kit/PerfGovernor';
 import { useClassStore } from '../../state/useClassStore';
 import { CameraController } from './CameraController';
 import { ClassWonder } from './ClassWonder';
+import { GiftBoxes } from './GiftBoxes';
+import { PatrolVehicle } from './PatrolVehicle';
 import { RoadNetwork } from './RoadNetwork';
 import { StudentLot } from './StudentLot';
+import { Weather } from './Weather';
 
 const NEAR_CAMERA_DIST_SQ = 38 * 38;
+
+const WEATHER_PRESETS = {
+  sunny: {
+    sky: new THREE.Color('#E0F2FE'),
+    hemiSky: new THREE.Color('#FFFBEB'),
+    ambient: 0.78,
+    hemi: 0.55,
+    dir: 1.35,
+  },
+  rainbow: {
+    sky: new THREE.Color('#BAE6FD'),
+    hemiSky: new THREE.Color('#FFFBEB'),
+    ambient: 0.78,
+    hemi: 0.55,
+    dir: 1.35,
+  },
+  rainy: {
+    sky: new THREE.Color('#334155'),
+    hemiSky: new THREE.Color('#94A3B8'),
+    ambient: 0.55,
+    hemi: 0.35,
+    dir: 0.7,
+  },
+} as const;
 
 export interface CitySceneProps {
   assets?: AssetService;
   telemetry?: TelemetryPort;
+  sound?: SoundEffectsService;
+  onAutoDriveArrived?: (lotId: number) => void;
+  onCollectGiftBox?: (boxId: string, studentId: string) => void;
 }
 
 /**
- * Main 3D scene assembling lighting, fog, PerfGovernor, RoadNetwork, 36-40 StudentLots,
- * ClassWonder, and CameraController (Rule 8 & GĐ4).
+ * Main 3D scene assembling lighting, fog, PerfGovernor, Weather, RoadNetwork,
+ * 36-40 StudentLots (with shops + wandering avatars), GiftBoxes, PatrolVehicle,
+ * ClassWonder, and CameraController (Rule 8 & GĐ4-GĐ5).
  */
-export function CityScene({ assets, telemetry }: CitySceneProps) {
+export function CityScene({
+  assets,
+  telemetry,
+  sound,
+  onAutoDriveArrived,
+  onCollectGiftBox,
+}: CitySceneProps) {
   const camera = useThree((s) => s.camera);
   const [qualityTier, setQualityTier] = useState<'high' | 'medium' | 'low'>('high');
   const [nearLotIds, setNearLotIds] = useState<ReadonlySet<number>>(() => new Set());
@@ -71,19 +110,57 @@ export function CityScene({ assets, telemetry }: CitySceneProps) {
     return () => clearInterval(timer);
   }, [camera, layout.lots, qualityTier, lowPowerMode]);
 
-  const skyColor =
-    weatherMode === 'rainy'
-      ? '#334155'
-      : weatherMode === 'rainbow'
-        ? '#BAE6FD'
-        : '#E0F2FE';
+  const bgColorRef = useRef<THREE.Color>(null);
+  const fogRef = useRef<THREE.Fog>(null);
+  const ambientRef = useRef<THREE.AmbientLight>(null);
+  const hemiRef = useRef<THREE.HemisphereLight>(null);
+  const dirLightRef = useRef<THREE.DirectionalLight>(null);
+
+  const reducedMotion = useMemo(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  useFrame((_, delta) => {
+    const target = WEATHER_PRESETS[weatherMode];
+    const alpha = reducedMotion ? 1 : Math.min(1, delta * 3.2);
+
+    if (bgColorRef.current) {
+      bgColorRef.current.lerp(target.sky, alpha);
+    }
+    if (fogRef.current) {
+      fogRef.current.color.lerp(target.sky, alpha);
+    }
+    if (ambientRef.current) {
+      ambientRef.current.intensity = THREE.MathUtils.lerp(
+        ambientRef.current.intensity,
+        target.ambient,
+        alpha
+      );
+    }
+    if (hemiRef.current) {
+      hemiRef.current.color.lerp(target.hemiSky, alpha);
+      hemiRef.current.intensity = THREE.MathUtils.lerp(
+        hemiRef.current.intensity,
+        target.hemi,
+        alpha
+      );
+    }
+    if (dirLightRef.current) {
+      dirLightRef.current.intensity = THREE.MathUtils.lerp(
+        dirLightRef.current.intensity,
+        target.dir,
+        alpha
+      );
+    }
+  });
 
   const enableShadows = qualityTier !== 'low' && !lowPowerMode;
 
   return (
     <>
-      <color attach="background" args={[skyColor]} />
-      <fog attach="fog" args={[skyColor, 65, 145]} />
+      <color ref={bgColorRef} attach="background" args={['#E0F2FE']} />
+      <fog ref={fogRef} attach="fog" args={['#E0F2FE', 65, 145]} />
 
       <PerfGovernor
         lowPowerMode={lowPowerMode}
@@ -93,18 +170,16 @@ export function CityScene({ assets, telemetry }: CitySceneProps) {
         }}
       />
 
-      {/* Warm classroom sunlight + soft hemisphere ambient */}
-      <ambientLight intensity={weatherMode === 'rainy' ? 0.55 : 0.78} />
+      {/* Warm classroom sunlight + soft hemisphere ambient (smoothly lerped on weather change) */}
+      <ambientLight ref={ambientRef} intensity={0.78} />
       <hemisphereLight
-        args={[
-          weatherMode === 'rainy' ? '#94A3B8' : '#FFFBEB',
-          '#15803D',
-          weatherMode === 'rainy' ? 0.35 : 0.55,
-        ]}
+        ref={hemiRef}
+        args={['#FFFBEB', '#15803D', 0.55]}
       />
       <directionalLight
+        ref={dirLightRef}
         position={[38, 56, 32]}
-        intensity={weatherMode === 'rainy' ? 0.7 : 1.35}
+        intensity={1.35}
         castShadow={enableShadows}
         shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-55}
@@ -114,6 +189,11 @@ export function CityScene({ assets, telemetry }: CitySceneProps) {
         shadow-camera-near={10}
         shadow-camera-far={130}
         shadow-bias={-0.0005}
+      />
+
+      <Weather
+        mode={weatherMode}
+        lowPowerMode={lowPowerMode || qualityTier === 'low'}
       />
 
       {/* Clicking empty ground clears student selection */}
@@ -132,7 +212,15 @@ export function CityScene({ assets, telemetry }: CitySceneProps) {
         pointsPerLevel={pointsPerLevel}
       />
 
-      {/* Render each student's lot and 3D shop */}
+      <GiftBoxes />
+
+      <PatrolVehicle
+        sound={sound}
+        onAutoDriveArrived={onAutoDriveArrived}
+        onCollectGiftBox={onCollectGiftBox}
+      />
+
+      {/* Render each student's lot, 3D shop, and wandering avatar */}
       {students.map((stu) => {
         const lot = layout.lots.find((l) => l.id === stu.lotNumber);
         if (!lot) return null;
