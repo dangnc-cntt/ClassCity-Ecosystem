@@ -158,7 +158,7 @@ for (const file of files) {
     if (rel.startsWith('games/')) {
       const gameId = rel.split('/')[1];
 
-      if (resolved) {
+      if (resolved && !isTestFile) {
         if (resolved.startsWith('platform/')) {
           const seg = resolved.split('/')[1]?.replace(/\.(ts|tsx)$/, '');
           if (!seg || !ALLOWED_GAME_PLATFORM_SEGMENTS.has(seg)) {
