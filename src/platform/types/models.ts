@@ -2,6 +2,7 @@ export type GameId = string;
 
 export type Tier = 'free' | 'pro';
 
+// tenantId == organizationId (tổ chức: cá nhân / trung tâm / trường). Xem docs/02 mục 8A.
 export type Role =
   | 'platform_admin'
   | 'org_owner'
@@ -50,9 +51,9 @@ export interface StudentCore {
   id: string;
   tenantId: string;
   classroomId: string;
-  studentCode: number;
+  studentCode: number; // 1..40
   name: string;
-  totalPoints: number;
+  totalPoints: number; // cache của SUM(ledger.delta), sàn 0
   walletCoins: number;
   equippedAvatarId: string;
   unlockedAssetIds: string[];
@@ -82,4 +83,20 @@ export interface AssetMeta {
   compatibleGames: GameId[] | '*';
   scale: number;
   yOffset: number;
+}
+
+export interface TenantBrand {
+  name: string;
+  logoUrl?: string;
+  primary: string;
+  accent: string;
+}
+
+export interface EcosystemSettings {
+  locale: 'vi' | 'en';
+  muted: boolean;
+  brand: TenantBrand;
+  devTier: Tier;
+  activeClassroomId: string;
+  lowPowerMode: boolean;
 }

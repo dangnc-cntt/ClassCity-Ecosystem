@@ -1,6 +1,10 @@
 import type { GameId, Permission, SessionUser } from './models';
 import type { RepositoryBundle } from '../ports/repositories';
 import type { TelemetryPort } from '../ports/telemetry';
+import type { EcosystemEventBus } from '../eventBus';
+import type { AssetService } from '../assets/assetService';
+import type { EntitlementService } from '../entitlements';
+import type { PermissionService } from '../permissions';
 
 export interface GameManifest {
   id: GameId;
@@ -33,10 +37,10 @@ export interface GameContext {
   user: SessionUser;
   classroomId: string;
   repos: RepositoryBundle;
-  bus: unknown;
-  assets: unknown;
-  entitlements: unknown;
-  permissions: unknown;
+  bus: EcosystemEventBus;
+  assets: AssetService;
+  entitlements: EntitlementService;
+  permissions: PermissionService;
   telemetry: TelemetryPort;
   audio: { muted: boolean };
   navigate: { toHub(): void };

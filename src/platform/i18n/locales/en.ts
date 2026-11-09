@@ -1,5 +1,15 @@
 export const enMessages: Record<string, string> = {
   'app.title': 'ClassCity 3D',
   'shell.loading': 'Initializing classroom city...',
+  'shell.hub.title': 'ClassCity Ecosystem Hub',
+  'shell.hub.subtitle': 'Choose an educational game for your classroom',
+  'shell.hub.comingSoon': 'Coming Soon',
+  'shell.hub.openGame': 'Launch Game',
   'game.classcity.name': 'ClassCity 3D – Classroom City',
+  'game.classfarm.name': 'ClassFarm – Classroom Farm',
+  'game.classarena.name': 'ClassArena – Quiz Arena',
+  'entitlement.proRequired.title': 'Pro Plan Feature',
+  'entitlement.proRequired.desc': 'Upgrade to Pro to unlock multiple classrooms, CSV exports, and full backups.',
+  'permission.denied': 'You do not have permission to perform this action.',
+  'storage.quotaExceeded': 'Browser storage is full. Please export a backup of your data.',
 };

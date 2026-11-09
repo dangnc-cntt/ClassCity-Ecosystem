@@ -96,6 +96,19 @@ const FORBIDDEN_DOMAIN_PKGS = new Set([
   'gsap',
 ]);
 
+const ALLOWED_GAME_PLATFORM_SEGMENTS = new Set([
+  'types',
+  'ports',
+  'i18n',
+  'assets',
+  'audio',
+  'theme',
+  'entitlements',
+  'permissions',
+  'eventBus',
+  'backup',
+]);
+
 // Matches Vietnamese accented characters (for R8 check in .tsx outside locales/)
 const VIETNAMESE_DIACRITIC_REGEX =
   /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/;
@@ -111,11 +124,11 @@ for (const file of files) {
     rel.endsWith('.test.ts') ||
     rel.endsWith('.test.tsx');
 
-  // Rule R1: localStorage only allowed inside platform/adapters/localStorage/**
-  if (!rel.startsWith('platform/adapters/localStorage/') && !isTestFile) {
+  // Rule R1: localStorage only allowed inside platform/adapters/**
+  if (!rel.startsWith('platform/adapters/') && !isTestFile) {
     if (/\blocalStorage\b/.test(codeNoComments)) {
       violations.push(
-        `[R1] ${rel}: Forbidden direct reference to "localStorage" outside platform/adapters/localStorage/**`
+        `[R1] ${rel}: Forbidden direct reference to "localStorage" outside platform/adapters/**`
       );
     }
   }
@@ -146,13 +159,13 @@ for (const file of files) {
       const gameId = rel.split('/')[1];
 
       if (resolved) {
-        if (
-          resolved.startsWith('platform/adapters') ||
-          resolved.startsWith('platform/createRepositories')
-        ) {
-          violations.push(
-            `[Boundary] ${rel}: games/** must NOT import platform/adapters/** or createRepositories (found "${spec}")`
-          );
+        if (resolved.startsWith('platform/')) {
+          const seg = resolved.split('/')[1]?.replace(/\.(ts|tsx)$/, '');
+          if (!seg || !ALLOWED_GAME_PLATFORM_SEGMENTS.has(seg)) {
+            violations.push(
+              `[Boundary] ${rel}: games/** is not allowed to import "${resolved}" (found "${spec}")`
+            );
+          }
         }
         if (resolved.startsWith('shell')) {
           violations.push(

@@ -1,5 +1,15 @@
 export const viMessages: Record<string, string> = {
   'app.title': 'ClassCity 3D',
   'shell.loading': 'Đang khởi tạo thành phố lớp học...',
+  'shell.hub.title': 'Sảnh Hệ Sinh Thái ClassCity',
+  'shell.hub.subtitle': 'Chọn trò chơi học tập cho lớp của bạn',
+  'shell.hub.comingSoon': 'Sắp ra mắt',
+  'shell.hub.openGame': 'Mở trò chơi',
   'game.classcity.name': 'ClassCity 3D – Thành phố Lớp học',
+  'game.classfarm.name': 'ClassFarm – Nông trại Lớp học',
+  'game.classarena.name': 'ClassArena – Đấu trường Trắc nghiệm',
+  'entitlement.proRequired.title': 'Tính năng gói Pro',
+  'entitlement.proRequired.desc': 'Nâng cấp lên gói Pro để mở khóa đa lớp học, xuất báo cáo CSV và sao lưu toàn diện.',
+  'permission.denied': 'Bạn không có quyền thực hiện thao tác này.',
+  'storage.quotaExceeded': 'Bộ nhớ trình duyệt đã đầy. Vui lòng xuất bản sao lưu dữ liệu.',
 };
