@@ -587,6 +587,11 @@ export function createRepositoryBundleFromDriver(
       writeClassroomStateMap('classcity', snapshot.classroomStates);
       writeStudentStateMap('classcity', snapshot.studentStates);
     },
+
+    async resetToSeed(): Promise<void> {
+      driver.clear();
+      applySeedToDriver(driver, buildSeedDataset(options?.seed ?? 20261109));
+    },
   };
 }
 

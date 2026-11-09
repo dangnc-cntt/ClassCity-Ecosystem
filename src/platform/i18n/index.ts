@@ -12,6 +12,9 @@ const dictionaries: Record<Locale, Record<string, string>> = {
 
 export function setLocale(locale: Locale): void {
   currentLocale = locale;
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = locale;
+  }
 }
 
 export function getLocale(): Locale {

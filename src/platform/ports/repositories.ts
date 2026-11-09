@@ -206,4 +206,5 @@ export interface RepositoryBundle {
   assetsCatalog: AssetCatalogRepository;
   settings: SettingsRepository;
   restoreSnapshot(snapshot: EcosystemSnapshot): Promise<void>;
+  resetToSeed(): Promise<void>;
 }

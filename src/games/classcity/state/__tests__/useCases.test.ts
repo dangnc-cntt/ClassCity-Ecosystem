@@ -200,4 +200,42 @@ describe('GĐ3 State & Use-Cases (with InMemoryAdapter)', () => {
       .students.find((s) => s.id === targetStu.id)!;
     expect(syncedStu.totalPoints).toBe(remoteTx.totalPoints);
   });
+
+  it('supports backup round-trip, CSV roster import, Pro leaderboard CSV export, and seed reset', async () => {
+    const useCases = createClassCityUseCases(ctx);
+    await useCases.loadClassroom('class-5a');
+
+    // 1. Free tier blocks leaderboard CSV export
+    expect(useCases.exportLeaderboardCsv()).toBeNull();
+    expect(useClassStore.getState().activeModal).toBe('upgrade_pro');
+
+    // 2. Pro tier unlocks leaderboard CSV export
+    await useCases.setSubscriptionTier('pro');
+    const csv = useCases.exportLeaderboardCsv();
+    expect(csv).toContain('rank,studentCode,name,level,totalPoints');
+
+    // 3. Export backup before modifying roster
+    const backup = await useCases.exportBackup();
+    expect(backup.schemaVersion).toBe(1);
+    expect(backup.data.students.length).toBe(60);
+
+    // 4. Import a 3-student CSV roster into class-5a
+    const importedOk = await useCases.importRosterRows([
+      { studentCode: 1, name: 'Nguyễn Thị Thuỳ Dương' },
+      { studentCode: 2, name: 'Trần Quốc Đạt' },
+      { studentCode: 3, name: 'Phạm Hữu Tuấn' },
+    ]);
+    expect(importedOk).toBe(true);
+    expect(useClassStore.getState().students).toHaveLength(3);
+
+    // 5. Restore backup -> back to 36 students in class-5a
+    const restored = await useCases.importBackup(backup);
+    expect(restored.ok).toBe(true);
+    expect(useClassStore.getState().students).toHaveLength(36);
+
+    // 6. Reset to sample seed data
+    await useCases.resetToSeedData();
+    expect(useClassStore.getState().activeClassroomId).toBe('class-5a');
+    expect(useClassStore.getState().students).toHaveLength(36);
+  });
 });

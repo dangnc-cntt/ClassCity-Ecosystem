@@ -1,5 +1,7 @@
 import {
   Component,
+  lazy,
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -9,17 +11,29 @@ import {
 } from 'react';
 import { Canvas } from '@react-three/fiber';
 import confetti from 'canvas-confetti';
+import { X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { cn } from '../../lib/cn';
 import { createSoundEffects } from '../../platform/audio/soundEffects';
 import { registerMessages, t } from '../../platform/i18n';
 import type { GameContext } from '../../platform/types/manifest';
 import { CityScene } from './components/canvas/CityScene';
-import { calculateWonderProgress } from './domain/levels';
+import { CalloutModal } from './components/ui/CalloutModal';
+import { StudentSidebar } from './components/ui/StudentSidebar';
+import { TopToolbar } from './components/ui/TopToolbar';
 import { classCityEn } from './locales/en';
 import { classCityVi } from './locales/vi';
-import type { VehicleKind, WeatherMode } from './state/types';
 import { createClassCityUseCases } from './state/useCases';
 import { useClassStore } from './state/useClassStore';
+
+const LeaderboardModal = lazy(
+  () => import('./components/ui/LeaderboardModal')
+);
+const SettingsModal = lazy(() => import('./components/ui/SettingsModal'));
+const ImportExportModal = lazy(
+  () => import('./components/ui/ImportExportModal')
+);
+const EcosystemModal = lazy(() => import('./components/ui/EcosystemModal'));
 
 registerMessages('vi', classCityVi);
 registerMessages('en', classCityEn);
@@ -61,9 +75,14 @@ export interface ClassCityModuleProps {
   ctx?: GameContext;
 }
 
+/**
+ * Root ClassCity 3D game module combining the 2D HUD (`TopToolbar`, `StudentSidebar`,
+ * native `<dialog>` modals) and the full-screen R3F `<Canvas>` city scene.
+ */
 export function ClassCityModule({ ctx }: ClassCityModuleProps) {
   const [contextLost, setContextLost] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
+  const [entitlementVersion, setEntitlementVersion] = useState(0);
   const canvasCleanupRef = useRef<(() => void) | null>(null);
 
   const useCases = useMemo(
@@ -80,6 +99,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
     [ctx]
   );
 
+  // Clean up WebGL context listeners and AudioContext on unmount (Rule R5)
   useEffect(() => {
     return () => {
       canvasCleanupRef.current?.();
@@ -88,452 +108,339 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
     };
   }, [sound]);
 
+  // Subscribe to entitlement changes so Free <-> Pro unlocks update immediately (Rule R7)
+  useEffect(() => {
+    if (!ctx) return;
+    return ctx.entitlements.subscribe(() => {
+      setEntitlementVersion((v) => v + 1);
+    });
+  }, [ctx]);
+
+  // Load initial classroom and subscribe to cross-game / cross-tab EcoEvents (Rule R5 & R10)
   useEffect(() => {
     if (!useCases || !ctx) return;
     void useCases.loadClassroom(ctx.classroomId);
 
-    const unsubRemoteAward = ctx.bus.on('LEDGER:POINTS_AWARDED', (evt) => {
-      if (evt.source.gameId !== 'classcity') {
+    const unsubAward = ctx.bus.on('LEDGER:POINTS_AWARDED', (evt) => {
+      const fromOtherInstance = evt.source.instanceId !== ctx.bus.instanceId;
+      const fromOtherGame = evt.source.gameId !== 'classcity';
+      if (fromOtherInstance || fromOtherGame) {
         useCases.applyRemoteAward(evt);
       }
     });
 
+    const unsubAvatar = ctx.bus.on('PROFILE:AVATAR_CHANGED', (evt) => {
+      if (evt.source.instanceId !== ctx.bus.instanceId) {
+        useClassStore.setState((prev) => ({
+          students: prev.students.map((s) =>
+            s.id === evt.payload.studentId
+              ? { ...s, equippedAvatarId: evt.payload.equippedAvatarId }
+              : s
+          ),
+        }));
+      }
+    });
+
+    const unsubClassroom = ctx.bus.on('CLASSROOM:CHANGED', (evt) => {
+      if (evt.source.instanceId !== ctx.bus.instanceId) {
+        void useCases.loadClassroom(evt.payload.classroomId);
+      }
+    });
+
     return () => {
-      unsubRemoteAward();
+      unsubAward();
+      unsubAvatar();
+      unsubClassroom();
     };
   }, [useCases, ctx]);
 
   const {
-    classrooms,
-    activeClassroomId,
     students,
     selectedStudentId,
     calledStudentId,
-    nearestManualLotId,
-    vehicleState,
-    vehicleKind,
-    weatherMode,
-    wonderProgress,
-    pointsPerLevel,
     activeModal,
     lastLevelUp,
-    useDoublePointsOnNextAward,
+    lastAwardedStudent,
+    toasts,
+    locale,
     selectStudent,
-    setUseDoublePointsOnNextAward,
+    dismissToast,
   } = useClassStore(
     useShallow((s) => ({
-      classrooms: s.classrooms,
-      activeClassroomId: s.activeClassroomId,
       students: s.students,
       selectedStudentId: s.selectedStudentId,
       calledStudentId: s.calledStudentId,
-      nearestManualLotId: s.nearestManualLotId,
-      vehicleState: s.vehicleState,
-      vehicleKind: s.vehicleKind,
-      weatherMode: s.weatherMode,
-      wonderProgress: s.wonderProgress,
-      pointsPerLevel: s.pointsPerLevel,
       activeModal: s.activeModal,
       lastLevelUp: s.lastLevelUp,
-      useDoublePointsOnNextAward: s.useDoublePointsOnNextAward,
+      lastAwardedStudent: s.lastAwardedStudent,
+      toasts: s.toasts,
+      locale: s.locale,
       selectStudent: s.selectStudent,
-      setUseDoublePointsOnNextAward: s.setUseDoublePointsOnNextAward,
+      dismissToast: s.dismissToast,
     }))
   );
 
-  // Celebrate level-up with confetti & fanfare
+  void locale;
+  void entitlementVersion;
+
+  const canMultiClass = Boolean(ctx?.entitlements.has('classcity.multi_class'));
+  const canExportCsv = Boolean(
+    ctx?.entitlements.has('classcity.leaderboard_export')
+  );
+
+  // Celebrate level-up with fanfare + confetti (respecting prefers-reduced-motion)
   useEffect(() => {
     if (!lastLevelUp) return;
     sound.playFanfare();
+
+    const reduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+
     try {
       void confetti({
-        particleCount: 70,
-        spread: 65,
+        particleCount: 75,
+        spread: 68,
         origin: { y: 0.6 },
       });
     } catch {
-      // Ignore confetti errors in headless tests
+      // Ignore confetti errors in headless test environments
     }
   }, [lastLevelUp, sound]);
 
-  const activeClassroom = classrooms.find((c) => c.id === activeClassroomId);
+  // Auto-dismiss transient toast notifications after 4s (cleaned up on unmount)
+  useEffect(() => {
+    if (toasts.length === 0) return;
+    const timers = toasts.map((notice) =>
+      setTimeout(() => {
+        dismissToast(notice.id);
+      }, 4000)
+    );
+    return () => {
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+    };
+  }, [toasts, dismissToast]);
+
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
   const calledStudent = students.find((s) => s.id === calledStudentId);
-  const wonderInfo = calculateWonderProgress(
-    wonderProgress,
-    Math.max(1, students.length),
-    pointsPerLevel
-  );
+  const levelUpStudent = lastLevelUp
+    ? students.find((s) => s.id === lastLevelUp.studentId)
+    : undefined;
+  const awardedStudent = lastAwardedStudent
+    ? students.find((s) => s.id === lastAwardedStudent.studentId)
+    : undefined;
 
-  const isAutoDriving =
-    vehicleState === 'accelerating' ||
-    vehicleState === 'cruising' ||
-    vehicleState === 'decelerating';
-
-  const handleQuickAward = (studentId: string, delta: number, reason: string) => {
-    if (!useCases) return;
-    sound.playPointAward(delta);
-    void useCases.awardPoints({ studentId, delta, reason });
-  };
-
-  const unusedDoublePerks =
-    calledStudent?.perks.filter((p) => p.kind === 'double_points' && !p.usedAt)
-      .length ?? 0;
+  // Accessible screen-reader announcement string (toasts are never the sole channel)
+  const liveAnnouncement = (() => {
+    if (calledStudent && activeModal === 'callout') {
+      return t('callout.title', {
+        code: calledStudent.studentCode,
+        name: calledStudent.name,
+      });
+    }
+    if (levelUpStudent && lastLevelUp) {
+      return t('city.announceLevelUp', {
+        name: levelUpStudent.name,
+        level: lastLevelUp.newLevel,
+      });
+    }
+    if (
+      awardedStudent &&
+      lastAwardedStudent &&
+      lastAwardedStudent.delta !== 0
+    ) {
+      const sign = lastAwardedStudent.delta > 0 ? '+' : '';
+      return t('city.announceAward', {
+        delta: `${sign}${lastAwardedStudent.delta}`,
+        name: awardedStudent.name,
+      });
+    }
+    if (selectedStudent) {
+      return t('city.selectedLot', {
+        code: selectedStudent.studentCode,
+        name: selectedStudent.name,
+        level: selectedStudent.level,
+        points: selectedStudent.totalPoints,
+      });
+    }
+    return t('city.ready');
+  })();
 
   const fallback2D = (
-    <div className="flex h-full w-full flex-col bg-slate-950 p-6 text-slate-100">
-      <h2 className="text-lg font-bold text-teal-400">
+    <div className="flex h-full w-full flex-col bg-[var(--surface)] p-6 pt-28 pr-[min(92vw,25rem)] text-[var(--ink-primary)]">
+      <h2 className="text-xl font-extrabold text-teal-300 text-balance">
         {t('city.webglFallbackTitle')}
       </h2>
-      <div className="mt-4 grid grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3 md:grid-cols-4">
+      <p className="mt-1 text-base text-[var(--ink-muted)] text-pretty">
+        {t('city.webglFallbackDesc')}
+      </p>
+      <ul className="mt-4 grid grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
         {students.map((stu) => (
-          <button
-            key={stu.id}
-            type="button"
-            onClick={() => selectStudent(stu.id)}
-            className="flex flex-col rounded-lg border border-slate-800 bg-slate-900 p-3 text-left hover:border-teal-500"
-          >
-            <span className="text-xs font-bold text-teal-400">
-              #{stu.studentCode} • Lv.{stu.level}
-            </span>
-            <span className="mt-1 font-semibold text-white">{stu.name}</span>
-            <span className="mt-1 text-xs text-amber-300">
-              {stu.totalPoints} pts
-            </span>
-          </button>
+          <li key={stu.id}>
+            <button
+              type="button"
+              onClick={() => selectStudent(stu.id)}
+              title={stu.name}
+              className="flex w-full flex-col rounded-xl border border-slate-800 bg-[var(--surface-elevated)] p-3.5 text-left hover:border-teal-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+            >
+              <span className="text-sm font-bold text-teal-300 tabular-nums">
+                #{stu.studentCode} • {t('sidebar.levelBadge', { level: stu.level })}
+              </span>
+              <span className="mt-1 truncate text-base font-bold text-white">
+                {stu.name}
+              </span>
+              <span className="mt-1 text-sm font-semibold text-amber-300 tabular-nums">
+                {t('sidebar.pointsSummary', { points: stu.totalPoints })}
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
-      {/* Screen-reader live region (Rule 3.2 a11y) */}
+    <main className="relative h-dvh w-screen overflow-hidden bg-[var(--surface)] text-[var(--ink-primary)]">
+      {/* Visually-hidden polite announcer for screen readers (fixing-accessibility) */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {calledStudent && activeModal === 'callout'
-          ? t('callout.title', {
-              code: calledStudent.studentCode,
-              name: calledStudent.name,
-            })
-          : selectedStudent
-            ? t('city.selectedLot', {
-                code: selectedStudent.studentCode,
-                name: selectedStudent.name,
-                level: selectedStudent.level,
-                points: selectedStudent.totalPoints,
-              })
-            : t('city.ready')}
+        {liveAnnouncement}
       </div>
 
-      {/* Top interactive overlay bar */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-center justify-between gap-2 p-3">
-        <div className="pointer-events-auto flex flex-wrap items-center gap-3 rounded-xl border border-slate-700/80 bg-slate-900/95 px-3.5 py-2 shadow-lg">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-medium text-teal-400">
-              {t('app.title')}
-            </span>
-            <span className="text-xs font-bold text-white">
-              {activeClassroom?.name ?? activeClassroomId} •{' '}
-              {t('city.studentCount', { count: students.length })}
-            </span>
-          </div>
+      {/* 1. Top Toolbar (first in keyboard Tab order) */}
+      <TopToolbar
+        useCases={useCases}
+        sound={sound}
+        canMultiClass={canMultiClass}
+      />
 
-          <div className="h-6 w-px bg-slate-700" />
+      {/* 2. Collapsible Right Student Sidebar (second in keyboard Tab order) */}
+      <StudentSidebar useCases={useCases} sound={sound} />
 
-          <div className="flex flex-col">
-            <span className="text-[11px] font-semibold text-amber-300">
-              {t('city.wonderProgress', {
-                percent: wonderInfo.percent,
-                stage: wonderInfo.stage,
-              })}
-            </span>
-            <div className="mt-1 h-2 w-32 overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full origin-left bg-amber-400 transition-transform duration-300"
-                style={{ transform: `scaleX(${wonderInfo.ratio})` }}
-              />
-            </div>
-          </div>
-
-          <div className="h-6 w-px bg-slate-700" />
-
-          {/* Auto-Drive button */}
-          <button
-            type="button"
-            disabled={isAutoDriving}
-            onClick={() => useCases?.startAutoDrive()}
-            className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-extrabold text-slate-950 shadow hover:bg-amber-400 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+      {/* 3. Interactive 3D City Canvas Region (third in keyboard Tab order) */}
+      <section
+        aria-label={t('city.canvasAriaLabel')}
+        className="relative z-0 h-full w-full"
+      >
+        <CanvasErrorBoundary fallback={fallback2D}>
+          <Canvas
+            key={canvasKey}
+            dpr={[1, 1.5]}
+            shadows
+            camera={{ position: [0, 42, 58], fov: 45, near: 0.5, far: 220 }}
+            gl={{ antialias: false, powerPreference: 'high-performance' }}
+            onCreated={({ gl }) => {
+              canvasCleanupRef.current?.();
+              const canvas = gl.domElement;
+              const handleLost = (e: Event) => {
+                e.preventDefault();
+                setContextLost(true);
+              };
+              const handleRestored = () => {
+                setContextLost(false);
+                setCanvasKey((k) => k + 1);
+              };
+              canvas.addEventListener('webglcontextlost', handleLost, false);
+              canvas.addEventListener(
+                'webglcontextrestored',
+                handleRestored,
+                false
+              );
+              canvasCleanupRef.current = () => {
+                canvas.removeEventListener(
+                  'webglcontextlost',
+                  handleLost,
+                  false
+                );
+                canvas.removeEventListener(
+                  'webglcontextrestored',
+                  handleRestored,
+                  false
+                );
+              };
+            }}
           >
-            {isAutoDriving ? t('city.autoDriving') : t('city.autoDrive')}
-          </button>
-
-          {/* Manual call nearest lot button when parked near a shop */}
-          {nearestManualLotId !== null && !isAutoDriving && (
-            <button
-              type="button"
-              onClick={() => void useCases?.callStudentByLot(nearestManualLotId)}
-              className="rounded-lg bg-teal-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-teal-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-300"
-            >
-              {t('city.manualCallLot', { code: nearestManualLotId })}
-            </button>
-          )}
-
-          {/* Vehicle Kind Switcher */}
-          <div className="flex items-center gap-1 rounded-lg bg-slate-800 p-1">
-            {(['car', 'ambulance', 'ufo'] as const).map((vk: VehicleKind) => (
-              <button
-                key={vk}
-                type="button"
-                onClick={() => void useCases?.setVehicleKind(vk)}
-                className={
-                  vehicleKind === vk
-                    ? 'rounded-md bg-teal-600 px-2 py-1 text-[11px] font-bold text-white'
-                    : 'rounded-md px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-700'
-                }
-              >
-                {t(`city.vehicle.${vk}`)}
-              </button>
-            ))}
-          </div>
-
-          {/* Weather Switcher */}
-          <div className="flex items-center gap-1 rounded-lg bg-slate-800 p-1">
-            {(['sunny', 'rainbow', 'rainy'] as const).map((wm: WeatherMode) => (
-              <button
-                key={wm}
-                type="button"
-                onClick={() => void useCases?.setWeatherMode(wm)}
-                className={
-                  weatherMode === wm
-                    ? 'rounded-md bg-sky-600 px-2 py-1 text-[11px] font-bold text-white'
-                    : 'rounded-md px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-700'
-                }
-              >
-                {t(`city.weather.${wm}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {selectedStudent && activeModal !== 'callout' && (
-          <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-xl border border-teal-500/50 bg-slate-900/95 px-3.5 py-2 shadow-lg">
-            <span className="text-xs font-bold text-teal-300">
-              {t('city.selectedLot', {
-                code: selectedStudent.studentCode,
-                name: selectedStudent.name,
-                level: selectedStudent.level,
-                points: selectedStudent.totalPoints,
-              })}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickAward(selectedStudent.id, 1, 'participate')
-                }
-                className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-500"
-              >
-                {t('city.awardPlus1')}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickAward(selectedStudent.id, 2, 'good_work')
-                }
-                className="rounded-lg bg-teal-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-teal-500"
-              >
-                {t('city.awardPlus2')}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickAward(selectedStudent.id, 5, 'excellent')
-                }
-                className="rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-slate-950 hover:bg-amber-400"
-              >
-                {t('city.awardPlus5')}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickAward(selectedStudent.id, -1, 'reminder')
-                }
-                className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-rose-500"
-              >
-                {t('city.awardMinus1')}
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => selectStudent(null)}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-            >
-              {t('city.resetCamera')}
-            </button>
-          </div>
-        )}
-      </header>
-
-      {/* Callout Modal when PatrolVehicle stops at a student's lot */}
-      {activeModal === 'callout' && calledStudent && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="callout-dialog-title"
-          className="fixed inset-x-0 bottom-6 z-30 mx-auto max-w-lg rounded-2xl border-2 border-amber-400 bg-slate-900/95 p-5 text-center shadow-2xl"
-        >
-          <h2
-            id="callout-dialog-title"
-            className="text-lg font-extrabold text-amber-300"
-          >
-            {t('callout.title', {
-              code: calledStudent.studentCode,
-              name: calledStudent.name,
-            })}
-          </h2>
-          <p className="mt-1 text-xs font-semibold text-slate-300">
-            {t('callout.subtitle', {
-              level: calledStudent.level,
-              points: calledStudent.totalPoints,
-            })}
-          </p>
-
-          {unusedDoublePerks > 0 && (
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setUseDoublePointsOnNextAward(!useDoublePointsOnNextAward)
-                }
-                className={
-                  useDoublePointsOnNextAward
-                    ? 'rounded-full bg-purple-600 px-3 py-1 text-xs font-bold text-white ring-2 ring-amber-300'
-                    : 'rounded-full border border-purple-400/50 bg-purple-950/60 px-3 py-1 text-xs font-semibold text-purple-200 hover:bg-purple-900/70'
-                }
-              >
-                {useDoublePointsOnNextAward
-                  ? t('callout.doublePerkActive')
-                  : t('callout.useDoublePerk', { count: unusedDoublePerks })}
-              </button>
-            </div>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                handleQuickAward(calledStudent.id, 1, 'callout_plus_1')
-              }
-              className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-500"
-            >
-              {t('city.awardPlus1')}
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                handleQuickAward(calledStudent.id, 2, 'callout_plus_2')
-              }
-              className="rounded-xl bg-teal-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-teal-500"
-            >
-              {t('city.awardPlus2')}
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                handleQuickAward(calledStudent.id, 5, 'callout_plus_5')
-              }
-              className="rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
-            >
-              {t('city.awardPlus5')}
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                handleQuickAward(calledStudent.id, -1, 'callout_minus_1')
-              }
-              className="rounded-xl bg-rose-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-rose-500"
-            >
-              {t('city.awardMinus1')}
-            </button>
-          </div>
-
-          <div className="mt-4 flex items-center justify-center gap-3 border-t border-slate-800 pt-3">
-            <button
-              type="button"
-              onClick={() => useCases?.startAutoDrive()}
-              className="rounded-lg bg-amber-500/20 px-3.5 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30"
-            >
-              {t('callout.callAnother')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                useCases?.dismissCallout();
-                selectStudent(null);
+            <CityScene
+              assets={ctx?.assets}
+              telemetry={ctx?.telemetry}
+              sound={sound}
+              onAutoDriveArrived={(lotId) => {
+                void useCases?.callStudentByLot(lotId);
               }}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-            >
-              {t('callout.close')}
-            </button>
-          </div>
-        </div>
-      )}
+              onCollectGiftBox={(boxId, studentId) => {
+                void useCases?.collectGiftBoxForStudent(boxId, studentId);
+              }}
+            />
+          </Canvas>
+        </CanvasErrorBoundary>
+      </section>
 
+      {/* WebGL Context Lost Overlay */}
       {contextLost && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/90">
-          <p className="rounded-xl border border-amber-500/40 bg-slate-900 px-6 py-4 text-sm font-semibold text-amber-300">
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/90">
+          <p className="rounded-xl border border-amber-500/40 bg-[var(--surface)] px-6 py-4 text-base font-bold text-amber-300">
             {t('city.webglContextLost')}
           </p>
         </div>
       )}
 
-      <CanvasErrorBoundary fallback={fallback2D}>
-        <Canvas
-          key={canvasKey}
-          dpr={[1, 1.5]}
-          shadows
-          camera={{ position: [0, 42, 58], fov: 45, near: 0.5, far: 220 }}
-          gl={{ antialias: false, powerPreference: 'high-performance' }}
-          onCreated={({ gl }) => {
-            canvasCleanupRef.current?.();
-            const canvas = gl.domElement;
-            const handleLost = (e: Event) => {
-              e.preventDefault();
-              setContextLost(true);
-            };
-            const handleRestored = () => {
-              setContextLost(false);
-              setCanvasKey((k) => k + 1);
-            };
-            canvas.addEventListener('webglcontextlost', handleLost, false);
-            canvas.addEventListener(
-              'webglcontextrestored',
-              handleRestored,
-              false
-            );
-            canvasCleanupRef.current = () => {
-              canvas.removeEventListener('webglcontextlost', handleLost, false);
-              canvas.removeEventListener(
-                'webglcontextrestored',
-                handleRestored,
-                false
-              );
-            };
-          }}
+      {/* Non-blocking Toast Notices */}
+      {toasts.length > 0 && (
+        <div
+          aria-live="polite"
+          className="pointer-events-none fixed bottom-4 left-4 z-30 flex max-w-sm flex-col gap-2 pb-[env(safe-area-inset-bottom)]"
         >
-          <CityScene
-            assets={ctx?.assets}
-            telemetry={ctx?.telemetry}
-            sound={sound}
-            onAutoDriveArrived={(lotId) => {
-              void useCases?.callStudentByLot(lotId);
-            }}
-            onCollectGiftBox={(boxId, studentId) => {
-              void useCases?.collectGiftBoxForStudent(boxId, studentId);
-            }}
+          {toasts.map((notice) => (
+            <div
+              key={notice.id}
+              className={cn(
+                'pointer-events-auto flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-base font-semibold shadow-lg',
+                notice.kind === 'error'
+                  ? 'border-rose-500 bg-rose-950 text-rose-100'
+                  : notice.kind === 'warning'
+                    ? 'border-amber-400 bg-slate-900 text-amber-200'
+                    : 'border-teal-500 bg-[var(--surface)] text-white'
+              )}
+            >
+              <span>{notice.message}</span>
+              <button
+                type="button"
+                aria-label={t('common.close')}
+                onClick={() => dismissToast(notice.id)}
+                className="rounded p-1 text-slate-300 hover:bg-slate-800 hover:text-white focus-visible:outline-2 focus-visible:outline-teal-400"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Primary Callout Modal (eagerly loaded for instant post-drive response) */}
+      <CalloutModal useCases={useCases} sound={sound} />
+
+      {/* Secondary Modals (code-split via React.lazy per Rule 8.10) */}
+      <Suspense fallback={null}>
+        {activeModal === 'leaderboard' && (
+          <LeaderboardModal
+            useCases={useCases}
+            canExportCsv={canExportCsv}
           />
-        </Canvas>
-      </CanvasErrorBoundary>
+        )}
+        {activeModal === 'settings' && <SettingsModal useCases={useCases} />}
+        {activeModal === 'import_export' && (
+          <ImportExportModal useCases={useCases} />
+        )}
+        {(activeModal === 'ecosystem' || activeModal === 'upgrade_pro') && (
+          <EcosystemModal
+            useCases={useCases}
+            bus={ctx?.bus}
+            isProUnlocked={canMultiClass}
+          />
+        )}
+      </Suspense>
     </main>
   );
 }

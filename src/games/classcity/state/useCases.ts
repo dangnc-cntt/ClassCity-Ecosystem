@@ -1,7 +1,14 @@
 import type { StoreApi } from 'zustand';
+import {
+  exportEcosystemBackup,
+  importEcosystemBackup,
+  serializeLeaderboardCsv,
+  type EcosystemBackupEnvelope,
+} from '../../../platform/backup';
+import type { ValidationIssue } from '../../../platform/ports/repositories';
 import type { GameContext } from '../../../platform/types/manifest';
 import type { EcoEvent } from '../../../platform/types/events';
-import type { TenantBrand, Tier } from '../../../platform/types/models';
+import type { GameId, TenantBrand, Tier } from '../../../platform/types/models';
 import { setLocale, t } from '../../../platform/i18n';
 import { applyTheme } from '../../../platform/theme/theme';
 import { generateCityLayout } from '../config/cityLayout';
@@ -17,6 +24,7 @@ import {
   pickRandomPerk,
   spawnGiftBoxes,
 } from '../domain/perks';
+import { selectLeaderboard } from '../domain/selectors';
 import {
   planAutoDrive,
   transitionVehicleState,
@@ -749,5 +757,148 @@ export function createClassCityUseCases(
         };
       });
     },
+
+    /**
+     * Navigates back to the Ecosystem Hub screen.
+     */
+    navigateToHub(): void {
+      ctx.bus.publish('HUB:NAVIGATE', { target: 'hub' });
+      ctx.navigate.toHub();
+    },
+
+    /**
+     * Resets all ecosystem data back to the deterministic sample seed and reloads Class 5A.
+     */
+    async resetToSeedData(): Promise<void> {
+      const state = store.getState();
+      if (!ctx.permissions.can('class:manage')) {
+        state.pushToast(t('permission.denied'), 'error');
+        return;
+      }
+      await ctx.repos.resetToSeed();
+      const teacher = await ctx.repos.teachers.getProfile();
+      ctx.entitlements.setTier(teacher.tier);
+      store.setState({ selectedStudentId: null, calledStudentId: null, activeModal: 'none' });
+      await this.loadClassroom('class-5a');
+      store.getState().pushToast(t('settings.resetSuccess'), 'success');
+    },
+
+    /**
+     * Imports a validated batch of student roster rows into the active classroom (overwriting existing roster).
+     */
+    async importRosterRows(
+      rows: Array<{ studentCode: number; name: string }>
+    ): Promise<boolean> {
+      const state = store.getState();
+      if (!ctx.permissions.can('roster:write')) {
+        state.pushToast(t('permission.denied'), 'error');
+        return false;
+      }
+      const imported = await ctx.repos.students.importBatch(
+        state.activeClassroomId,
+        rows
+      );
+      store.setState({ selectedStudentId: null, calledStudentId: null });
+      await this.loadClassroom(state.activeClassroomId);
+      for (const stu of imported) {
+        ctx.bus.publish(
+          'ROSTER:STUDENT_UPDATED',
+          { student: stu },
+          { classroomId: state.activeClassroomId }
+        );
+      }
+      store
+        .getState()
+        .pushToast(t('importExport.csvSuccess', { count: imported.length }), 'success');
+      return true;
+    },
+
+    /**
+     * Exports a complete `EcosystemBackupEnvelope` JSON object.
+     */
+    async exportBackup(): Promise<EcosystemBackupEnvelope> {
+      return exportEcosystemBackup(ctx.repos);
+    },
+
+    /**
+     * Validates and restores a full `backup.json` snapshot.
+     */
+    async importBackup(
+      raw: unknown
+    ): Promise<
+      | { ok: true; backup: EcosystemBackupEnvelope }
+      | { ok: false; issues: ValidationIssue[] }
+    > {
+      const res = await importEcosystemBackup(ctx.repos, raw);
+      if (!res.ok) {
+        return res;
+      }
+      ctx.entitlements.setTier(res.backup.data.teacher.tier);
+      const firstClassroomId =
+        res.backup.data.classrooms[0]?.id ?? 'class-5a';
+      store.setState({ selectedStudentId: null, calledStudentId: null });
+      await this.loadClassroom(firstClassroomId);
+      ctx.bus.publish('CLASSROOM:CHANGED', { classroomId: firstClassroomId });
+      store
+        .getState()
+        .pushToast(t('importExport.backupRestoreSuccess'), 'success');
+      return res;
+    },
+
+    /**
+     * Exports sorted leaderboard CSV string (requires Pro entitlement `classcity.leaderboard_export`).
+     */
+    exportLeaderboardCsv(): string | null {
+      if (!ctx.entitlements.has('classcity.leaderboard_export')) {
+        store.setState({ activeModal: 'upgrade_pro' });
+        return null;
+      }
+      const sorted = selectLeaderboard(store.getState().students);
+      return serializeLeaderboardCsv(
+        sorted.map((s, idx) => ({
+          rank: idx + 1,
+          studentCode: s.studentCode,
+          name: s.name,
+          level: s.level,
+          totalPoints: s.totalPoints,
+        }))
+      );
+    },
+
+    /**
+     * Simulates another game in the Ecosystem (e.g. `classarena` or `classfarm`) awarding points
+     * to a student via the shared immutable ledger + `EcosystemEventBus` (`Brief §9`).
+     */
+    async simulateExternalGameAward(params: {
+      gameId: GameId;
+      studentId: string;
+      delta: number;
+      reason: string;
+    }): Promise<void> {
+      const state = store.getState();
+      const awardRes = await ctx.repos.ledger.award({
+        studentId: params.studentId,
+        classroomId: state.activeClassroomId,
+        gameId: params.gameId,
+        delta: params.delta,
+        reason: params.reason,
+        idempotencyKey: makeUuid(),
+        actorUserId: state.user.userId,
+      });
+
+      ctx.bus.publish(
+        'LEDGER:POINTS_AWARDED',
+        {
+          tx: awardRes.tx,
+          totalPoints: awardRes.totalPoints,
+        },
+        {
+          gameId: params.gameId,
+          classroomId: state.activeClassroomId,
+        }
+      );
+    },
   };
 }
+
+export type ClassCityUseCases = ReturnType<typeof createClassCityUseCases>;
