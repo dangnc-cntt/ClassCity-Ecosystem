@@ -1,4 +1,15 @@
 export const classCityEn: Record<string, string> = {
   'city.ready': 'ClassCity is ready',
+  'city.classroomLabel': 'Active Classroom',
+  'city.studentCount': '{count} student shops',
+  'city.wonderProgress': 'Class Wonder: {percent}% (Stage {stage}/6)',
+  'city.resetCamera': 'City Overview',
+  'city.selectedLot': 'Lot #{code} – {name} (Lv.{level} • {points} pts)',
+  'city.awardPlus1': '+1 Participate',
+  'city.awardPlus2': '+2 Good Work',
+  'city.awardPlus5': '+5 Excellent',
+  'city.awardMinus1': '-1 Reminder',
+  'city.webglFallbackTitle': '2D Roster Mode (WebGL unavailable)',
+  'city.webglContextLost': 'Restoring 3D graphics context...',
   'ledger.awardErrorRollback': 'Failed to save points. Changes rolled back.',
 };

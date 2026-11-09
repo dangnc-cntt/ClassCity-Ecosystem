@@ -1,4 +1,15 @@
 export const classCityVi: Record<string, string> = {
   'city.ready': 'Thành phố ClassCity đã sẵn sàng',
+  'city.classroomLabel': 'Lớp đang mở',
+  'city.studentCount': '{count} cửa hàng học sinh',
+  'city.wonderProgress': 'Kỳ Quan Lớp Học: {percent}% (Giai đoạn {stage}/6)',
+  'city.resetCamera': 'Toàn cảnh thành phố',
+  'city.selectedLot': 'Ô số #{code} – {name} (Cấp {level} • {points} điểm)',
+  'city.awardPlus1': '+1 Phát biểu',
+  'city.awardPlus2': '+2 Làm bài tốt',
+  'city.awardPlus5': '+5 Xuất sắc',
+  'city.awardMinus1': '-1 Nhắc nhở',
+  'city.webglFallbackTitle': 'Chế độ Danh sách 2D (WebGL không khả dụng)',
+  'city.webglContextLost': 'Đang khôi phục ngữ cảnh đồ họa 3D...',
   'ledger.awardErrorRollback': 'Lỗi lưu điểm. Đã hoàn tác.',
 };
