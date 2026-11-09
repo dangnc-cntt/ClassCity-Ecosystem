@@ -38,6 +38,22 @@ const EcosystemModal = lazy(() => import('./components/ui/EcosystemModal'));
 registerMessages('vi', classCityVi);
 registerMessages('en', classCityEn);
 
+function detectWebGLSupport(): boolean {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return false;
+  }
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      canvas.getContext('webgl2') ??
+      canvas.getContext('webgl') ??
+      canvas.getContext('experimental-webgl');
+    return Boolean(gl);
+  } catch {
+    return false;
+  }
+}
+
 interface CanvasErrorBoundaryProps {
   fallback: ReactNode;
   children: ReactNode;
@@ -80,14 +96,56 @@ export interface ClassCityModuleProps {
  * native `<dialog>` modals) and the full-screen R3F `<Canvas>` city scene.
  */
 export function ClassCityModule({ ctx }: ClassCityModuleProps) {
+  const [webglAvailable] = useState<boolean>(() => detectWebGLSupport());
   const [contextLost, setContextLost] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
   const [entitlementVersion, setEntitlementVersion] = useState(0);
   const canvasCleanupRef = useRef<(() => void) | null>(null);
 
+  const latestCtxRef = useRef<GameContext | undefined>(ctx);
+  latestCtxRef.current = ctx;
+
+  const stableProxyCtx = useMemo<GameContext | null>(() => {
+    if (!ctx) return null;
+    return {
+      get user() {
+        return latestCtxRef.current!.user;
+      },
+      get classroomId() {
+        return latestCtxRef.current!.classroomId;
+      },
+      get repos() {
+        return latestCtxRef.current!.repos;
+      },
+      get bus() {
+        return latestCtxRef.current!.bus;
+      },
+      get assets() {
+        return latestCtxRef.current!.assets;
+      },
+      get entitlements() {
+        return latestCtxRef.current!.entitlements;
+      },
+      get permissions() {
+        return latestCtxRef.current!.permissions;
+      },
+      get telemetry() {
+        return latestCtxRef.current!.telemetry;
+      },
+      get audio() {
+        return latestCtxRef.current!.audio;
+      },
+      get navigate() {
+        return latestCtxRef.current!.navigate;
+      },
+    };
+    // Only recreate if core platform bus/repos identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx?.repos, ctx?.bus]);
+
   const useCases = useMemo(
-    () => (ctx ? createClassCityUseCases(ctx) : null),
-    [ctx]
+    () => (stableProxyCtx ? createClassCityUseCases(stableProxyCtx) : null),
+    [stableProxyCtx]
   );
 
   const sound = useMemo(
@@ -96,8 +154,16 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
         initialMuted: ctx?.audio.muted ?? false,
         bus: ctx?.bus,
       }),
-    [ctx]
+    // Only recreate if bus identity changes; mute updates sync via effect below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ctx?.bus]
   );
+
+  useEffect(() => {
+    if (ctx) {
+      sound.setMuted(ctx.audio.muted);
+    }
+  }, [ctx, sound]);
 
   // Clean up WebGL context listeners and AudioContext on unmount (Rule R5)
   useEffect(() => {
@@ -110,27 +176,34 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
 
   // Subscribe to entitlement changes so Free <-> Pro unlocks update immediately (Rule R7)
   useEffect(() => {
-    if (!ctx) return;
-    return ctx.entitlements.subscribe(() => {
+    const entitlements = ctx?.entitlements;
+    if (!entitlements) return;
+    return entitlements.subscribe(() => {
       setEntitlementVersion((v) => v + 1);
     });
-  }, [ctx]);
+  }, [ctx?.entitlements]);
 
-  // Load initial classroom and subscribe to cross-game / cross-tab EcoEvents (Rule R5 & R10)
+  // Load classroom whenever active classroomId or useCases changes
   useEffect(() => {
-    if (!useCases || !ctx) return;
+    if (!useCases || !ctx?.classroomId) return;
     void useCases.loadClassroom(ctx.classroomId);
+  }, [useCases, ctx?.classroomId]);
 
-    const unsubAward = ctx.bus.on('LEDGER:POINTS_AWARDED', (evt) => {
-      const fromOtherInstance = evt.source.instanceId !== ctx.bus.instanceId;
+  // Subscribe to cross-game / cross-tab EcoEvents once per bus instance (Rule R5 & R10)
+  useEffect(() => {
+    const bus = ctx?.bus;
+    if (!useCases || !bus) return;
+
+    const unsubAward = bus.on('LEDGER:POINTS_AWARDED', (evt) => {
+      const fromOtherInstance = evt.source.instanceId !== bus.instanceId;
       const fromOtherGame = evt.source.gameId !== 'classcity';
       if (fromOtherInstance || fromOtherGame) {
         useCases.applyRemoteAward(evt);
       }
     });
 
-    const unsubAvatar = ctx.bus.on('PROFILE:AVATAR_CHANGED', (evt) => {
-      if (evt.source.instanceId !== ctx.bus.instanceId) {
+    const unsubAvatar = bus.on('PROFILE:AVATAR_CHANGED', (evt) => {
+      if (evt.source.instanceId !== bus.instanceId) {
         useClassStore.setState((prev) => ({
           students: prev.students.map((s) =>
             s.id === evt.payload.studentId
@@ -141,8 +214,8 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
       }
     });
 
-    const unsubClassroom = ctx.bus.on('CLASSROOM:CHANGED', (evt) => {
-      if (evt.source.instanceId !== ctx.bus.instanceId) {
+    const unsubClassroom = bus.on('CLASSROOM:CHANGED', (evt) => {
+      if (evt.source.instanceId !== bus.instanceId) {
         void useCases.loadClassroom(evt.payload.classroomId);
       }
     });
@@ -152,7 +225,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
       unsubAvatar();
       unsubClassroom();
     };
-  }, [useCases, ctx]);
+  }, [useCases, ctx?.bus]);
 
   const {
     students,
@@ -324,57 +397,61 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
         aria-label={t('city.canvasAriaLabel')}
         className="relative z-0 h-full w-full"
       >
-        <CanvasErrorBoundary fallback={fallback2D}>
-          <Canvas
-            key={canvasKey}
-            dpr={[1, 1.5]}
-            shadows
-            camera={{ position: [0, 42, 58], fov: 45, near: 0.5, far: 220 }}
-            gl={{ antialias: false, powerPreference: 'high-performance' }}
-            onCreated={({ gl }) => {
-              canvasCleanupRef.current?.();
-              const canvas = gl.domElement;
-              const handleLost = (e: Event) => {
-                e.preventDefault();
-                setContextLost(true);
-              };
-              const handleRestored = () => {
-                setContextLost(false);
-                setCanvasKey((k) => k + 1);
-              };
-              canvas.addEventListener('webglcontextlost', handleLost, false);
-              canvas.addEventListener(
-                'webglcontextrestored',
-                handleRestored,
-                false
-              );
-              canvasCleanupRef.current = () => {
-                canvas.removeEventListener(
-                  'webglcontextlost',
-                  handleLost,
-                  false
-                );
-                canvas.removeEventListener(
+        {!webglAvailable ? (
+          fallback2D
+        ) : (
+          <CanvasErrorBoundary fallback={fallback2D}>
+            <Canvas
+              key={canvasKey}
+              dpr={[1, 1.5]}
+              shadows
+              camera={{ position: [0, 42, 58], fov: 45, near: 0.5, far: 220 }}
+              gl={{ antialias: false, powerPreference: 'high-performance' }}
+              onCreated={({ gl }) => {
+                canvasCleanupRef.current?.();
+                const canvas = gl.domElement;
+                const handleLost = (e: Event) => {
+                  e.preventDefault();
+                  setContextLost(true);
+                };
+                const handleRestored = () => {
+                  setContextLost(false);
+                  setCanvasKey((k) => k + 1);
+                };
+                canvas.addEventListener('webglcontextlost', handleLost, false);
+                canvas.addEventListener(
                   'webglcontextrestored',
                   handleRestored,
                   false
                 );
-              };
-            }}
-          >
-            <CityScene
-              assets={ctx?.assets}
-              telemetry={ctx?.telemetry}
-              sound={sound}
-              onAutoDriveArrived={(lotId) => {
-                void useCases?.callStudentByLot(lotId);
+                canvasCleanupRef.current = () => {
+                  canvas.removeEventListener(
+                    'webglcontextlost',
+                    handleLost,
+                    false
+                  );
+                  canvas.removeEventListener(
+                    'webglcontextrestored',
+                    handleRestored,
+                    false
+                  );
+                };
               }}
-              onCollectGiftBox={(boxId, studentId) => {
-                void useCases?.collectGiftBoxForStudent(boxId, studentId);
-              }}
-            />
-          </Canvas>
-        </CanvasErrorBoundary>
+            >
+              <CityScene
+                assets={ctx?.assets}
+                telemetry={ctx?.telemetry}
+                sound={sound}
+                onAutoDriveArrived={(lotId) => {
+                  void useCases?.callStudentByLot(lotId);
+                }}
+                onCollectGiftBox={(boxId, studentId) => {
+                  void useCases?.collectGiftBoxForStudent(boxId, studentId);
+                }}
+              />
+            </Canvas>
+          </CanvasErrorBoundary>
+        )}
       </section>
 
       {/* WebGL Context Lost Overlay */}
@@ -390,7 +467,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
       {toasts.length > 0 && (
         <div
           aria-live="polite"
-          className="pointer-events-none fixed bottom-4 left-4 z-30 flex max-w-sm flex-col gap-2 pb-[env(safe-area-inset-bottom)]"
+          className="pointer-events-none fixed bottom-16 left-3 z-30 flex max-w-sm flex-col gap-2 pb-[env(safe-area-inset-bottom)]"
         >
           {toasts.map((notice) => (
             <div

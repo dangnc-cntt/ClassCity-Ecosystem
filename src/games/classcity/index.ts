@@ -1,7 +1,11 @@
-import { createRoot } from 'react-dom/client';
 import { createElement, StrictMode } from 'react';
-import type { GameContext, GameHandle, GameManifest, GameModule } from '../../platform/types/manifest';
-import { ClassCityModule } from './ClassCityModule';
+import { createRoot } from 'react-dom/client';
+import type {
+  GameContext,
+  GameHandle,
+  GameManifest,
+  GameModule,
+} from '../../platform/types/manifest';
 
 export const classcityManifest: GameManifest = {
   id: 'classcity',
@@ -24,18 +28,43 @@ export const classcityManifest: GameManifest = {
     ],
     gamePrefix: '/games/classcity/models/',
   },
-  entry: async () => classcityModule,
-};
+  entry: async (): Promise<GameModule> => {
+    const [{ ClassCityModule }, { useClassStore }] = await Promise.all([
+      import('./ClassCityModule'),
+      import('./state/useClassStore'),
+    ]);
 
-export const classcityModule: GameModule = {
-  mount(el: HTMLElement, ctx: GameContext): GameHandle {
-    const root = createRoot(el);
-    root.render(
-      createElement(StrictMode, null, createElement(ClassCityModule, { ctx }))
-    );
     return {
-      async unmount(): Promise<void> {
-        root.unmount();
+      mount(el: HTMLElement, initialCtx: GameContext): GameHandle {
+        let activeCtx = initialCtx;
+        const root = createRoot(el);
+
+        const renderCurrent = () => {
+          root.render(
+            createElement(
+              StrictMode,
+              null,
+              createElement(ClassCityModule, { ctx: activeCtx })
+            )
+          );
+        };
+
+        renderCurrent();
+
+        return {
+          onContextChange(next: Partial<GameContext>): void {
+            activeCtx = { ...activeCtx, ...next };
+            renderCurrent();
+          },
+          async unmount(): Promise<void> {
+            root.unmount();
+            useClassStore.setState({
+              activeModal: 'none',
+              activeAutoPlan: null,
+              vehicleState: 'idle',
+            });
+          },
+        };
       },
     };
   },
