@@ -412,9 +412,9 @@ export function PatrolVehicle({
     pose.x += Math.cos(pose.heading) * pose.speed * dt;
     pose.z += Math.sin(pose.heading) * pose.speed * dt;
 
-    // Keep within city road bounds [-37, 37] x [-25, 25]
-    pose.x = Math.max(-37, Math.min(37, pose.x));
-    pose.z = Math.max(-25, Math.min(25, pose.z));
+    // Keep within the island's road & park bounds [-58, 58] x [-44, 46]
+    pose.x = Math.max(-58, Math.min(58, pose.x));
+    pose.z = Math.max(-44, Math.min(46, pose.z));
 
     grp.position.set(pose.x, 0, pose.z);
     grp.rotation.y = -pose.heading;
@@ -452,7 +452,7 @@ export function PatrolVehicle({
   });
 
   return (
-    <group ref={rootRef} position={[-28, 0, -22]} name="PatrolVehicle">
+    <group ref={rootRef} position={[-44, 0, 13]} name="PatrolVehicle">
       <BlobShadow radius={1.35} y={0.03} />
       <VehicleProceduralMesh kind={vehicleKind} />
     </group>

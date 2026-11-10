@@ -5,6 +5,24 @@ export const GROUND_DEPTH = 100;
 export const ROAD_WIDTH = 5;
 export const WONDER_RADIUS = 7;
 
+/**
+ * Checkerboard city plan: every shop faces +Z (toward the park and the default camera),
+ * the shop block sits at the back (-Z) and the public park with the Class Wonder fills the front (+Z).
+ */
+export const COLUMN_X: readonly number[] = [
+  -41, -33, -25, -17, -9, 9, 17, 25, 33, 41,
+];
+export const ROW_Z: readonly number[] = [-36, -22, -8, 6];
+/** Centre line of the street that runs in front of each shop row. */
+export const ROAD_Z: readonly number[] = ROW_Z.map((z) => z + 7);
+/** Vertical streets: two outer boulevards and one central avenue (checkerboard crossings). */
+export const ROAD_X: readonly number[] = [-52, 0, 52];
+export const ROAD_Z_MIN = -42;
+export const ROAD_Z_MAX = (ROAD_Z[ROAD_Z.length - 1] ?? 13) + ROAD_WIDTH / 2;
+export const PARK_Z_START = ROAD_Z_MAX + 1;
+export const PARK_Z_END = 48;
+export const WONDER_CENTER: [number, number, number] = [0, 0, 32];
+
 export interface Lot {
   id: number; // 1..N
   position: [number, number, number];
@@ -34,14 +52,11 @@ export interface CityLayout {
   graph: WaypointGraph;
 }
 
-const HORIZONTAL_X_ASC = [-28, -20, -12, -4, 4, 12, 20, 28] as const;
-const HORIZONTAL_X_DESC = [28, 20, 12, 4, -4, -12, -20, -28] as const;
-const VERTICAL_Z_ASC = [-14, -6, 6, 14] as const;
-const VERTICAL_Z_DESC = [14, 6, -6, -14] as const;
-
 /**
- * Generates deterministic 40-slot city layout + closed-loop waypoint graph (Rule 6.1).
- * If `lotCount < 40` (e.g. 36), `lots` contains the active `1..lotCount` lots and `emptyLots` contains the remaining green park slots.
+ * Generates the deterministic 40-slot checkerboard layout (4 rows x 10 columns, all facing +Z)
+ * plus a closed serpentine waypoint loop: east along row 1's street, west along row 2's, and so on,
+ * then back up the west boulevard. If `lotCount < 40` (e.g. 36), `lots` holds the active `1..lotCount`
+ * lots and `emptyLots` the remaining slots, which are rendered as green mini-parks.
  */
 export function generateCityLayout(lotCount = 36): CityLayout {
   const clampedCount = Math.min(40, Math.max(1, Math.floor(lotCount)));
@@ -53,150 +68,53 @@ export function generateCityLayout(lotCount = 36): CityLayout {
     ringOrder.push(id);
   };
 
-  // Clockwise ring road: NW corner -> North lane -> NE corner -> East lane -> SE corner -> South lane -> SW corner -> West lane
-  addRingNode('wp_corner_nw', -35, -22);
-  HORIZONTAL_X_ASC.forEach((x, idx) => {
-    addRingNode(`wp_n_${idx + 1}`, x, -22);
+  const westX = ROAD_X[0] ?? -52;
+  const eastX = ROAD_X[ROAD_X.length - 1] ?? 52;
+
+  ROW_Z.forEach((_, r) => {
+    const roadZ = ROAD_Z[r]!;
+    const eastbound = r % 2 === 0;
+    const startX = eastbound ? westX : eastX;
+    const endX = eastbound ? eastX : westX;
+    addRingNode(`wp_r${r}_start`, startX, roadZ);
+
+    const cols = COLUMN_X.map((x, c) => ({ x, c }));
+    if (!eastbound) cols.reverse();
+    for (const { x, c } of cols) {
+      addRingNode(`wp_r${r}_c${c}`, x, roadZ);
+    }
+    addRingNode(`wp_r${r}_end`, endX, roadZ);
   });
-  addRingNode('wp_corner_ne', 35, -22);
-  VERTICAL_Z_ASC.forEach((z, idx) => {
-    addRingNode(`wp_e_${idx + 1}`, 35, z);
-  });
-  addRingNode('wp_corner_se', 35, 22);
-  HORIZONTAL_X_DESC.forEach((x, idx) => {
-    addRingNode(`wp_s_${idx + 1}`, x, 22);
-  });
-  addRingNode('wp_corner_sw', -35, 22);
-  VERTICAL_Z_DESC.forEach((z, idx) => {
-    addRingNode(`wp_w_${idx + 1}`, -35, z);
-  });
+
+  // Return leg up the west boulevard back to the first node (closes the loop)
+  for (let r = ROW_Z.length - 2; r >= 1; r -= 1) {
+    addRingNode(`wp_ret_${r}`, westX, ROAD_Z[r]!);
+  }
 
   const allSlots: Lot[] = [];
   let nextId = 1;
 
-  // 1. North Outer (8 lots: 1..8) at z = -30, facing South (0 rad)
-  HORIZONTAL_X_ASC.forEach((x, idx) => {
-    const wpId = `wp_n_${idx + 1}`;
-    allSlots.push({
-      id: nextId++,
-      position: [x, 0, -30],
-      rotationY: 0,
-      roadWaypointId: wpId,
-      parkingPoint: [x, -23.2],
-      parkingHeading: 0,
-      cameraFocus: {
-        position: [x, 7.2, -18.5],
-        lookAt: [x, 2.5, -28.5],
-      },
-      sidewalkPatrol: {
-        a: [x - 2, -26.2],
-        b: [x + 2, -26.2],
-      },
-    });
-  });
-
-  // 2. East Outer (4 lots: 9..12) at x = 43, facing West (-PI/2 rad)
-  VERTICAL_Z_ASC.forEach((z, idx) => {
-    const wpId = `wp_e_${idx + 1}`;
-    allSlots.push({
-      id: nextId++,
-      position: [43, 0, z],
-      rotationY: -Math.PI / 2,
-      roadWaypointId: wpId,
-      parkingPoint: [36.2, z],
-      parkingHeading: Math.PI / 2,
-      cameraFocus: {
-        position: [31.5, 7.2, z],
-        lookAt: [41.5, 2.5, z],
-      },
-      sidewalkPatrol: {
-        a: [39.2, z - 2],
-        b: [39.2, z + 2],
-      },
-    });
-  });
-
-  // 3. South Outer (8 lots: 13..20) at z = 30, facing North (PI rad)
-  HORIZONTAL_X_DESC.forEach((x, idx) => {
-    const wpId = `wp_s_${idx + 1}`;
-    allSlots.push({
-      id: nextId++,
-      position: [x, 0, 30],
-      rotationY: Math.PI,
-      roadWaypointId: wpId,
-      parkingPoint: [x, 23.2],
-      parkingHeading: Math.PI,
-      cameraFocus: {
-        position: [x, 7.2, 18.5],
-        lookAt: [x, 2.5, 28.5],
-      },
-      sidewalkPatrol: {
-        a: [x - 2, 26.2],
-        b: [x + 2, 26.2],
-      },
-    });
-  });
-
-  // 4. West Outer (4 lots: 21..24) at x = -43, facing East (PI/2 rad)
-  VERTICAL_Z_DESC.forEach((z, idx) => {
-    const wpId = `wp_w_${idx + 1}`;
-    allSlots.push({
-      id: nextId++,
-      position: [-43, 0, z],
-      rotationY: Math.PI / 2,
-      roadWaypointId: wpId,
-      parkingPoint: [-36.2, z],
-      parkingHeading: -Math.PI / 2,
-      cameraFocus: {
-        position: [-31.5, 7.2, z],
-        lookAt: [-41.5, 2.5, z],
-      },
-      sidewalkPatrol: {
-        a: [-39.2, z - 2],
-        b: [-39.2, z + 2],
-      },
-    });
-  });
-
-  // 5. North Inner (8 lots: 25..32) at z = -14, facing North road (PI rad)
-  HORIZONTAL_X_ASC.forEach((x, idx) => {
-    const wpId = `wp_n_${idx + 1}`;
-    allSlots.push({
-      id: nextId++,
-      position: [x, 0, -14],
-      rotationY: Math.PI,
-      roadWaypointId: wpId,
-      parkingPoint: [x, -20.8],
-      parkingHeading: 0,
-      cameraFocus: {
-        position: [x, 7.2, -25.5],
-        lookAt: [x, 2.5, -15.5],
-      },
-      sidewalkPatrol: {
-        a: [x - 2, -17.8],
-        b: [x + 2, -17.8],
-      },
-    });
-  });
-
-  // 6. South Inner (8 lots: 33..40) at z = 14, facing South road (0 rad)
-  HORIZONTAL_X_DESC.forEach((x, idx) => {
-    const wpId = `wp_s_${idx + 1}`;
-    allSlots.push({
-      id: nextId++,
-      position: [x, 0, 14],
-      rotationY: 0,
-      roadWaypointId: wpId,
-      parkingPoint: [x, 20.8],
-      parkingHeading: Math.PI,
-      cameraFocus: {
-        position: [x, 7.2, 25.5],
-        lookAt: [x, 2.5, 15.5],
-      },
-      sidewalkPatrol: {
-        a: [x - 2, 17.8],
-        b: [x + 2, 17.8],
-      },
+  ROW_Z.forEach((rowZ, r) => {
+    const roadZ = ROAD_Z[r]!;
+    const eastbound = r % 2 === 0;
+    COLUMN_X.forEach((x, c) => {
+      allSlots.push({
+        id: nextId++,
+        position: [x, 0, rowZ],
+        rotationY: 0,
+        roadWaypointId: `wp_r${r}_c${c}`,
+        // Parked on the lane next to the shop-side sidewalk, heading with the row's driving direction
+        parkingPoint: [x, roadZ - 1.2],
+        parkingHeading: eastbound ? 0 : Math.PI,
+        cameraFocus: {
+          position: [x, 8.2, rowZ + 10.2],
+          lookAt: [x, 2.8, rowZ + 0.5],
+        },
+        sidewalkPatrol: {
+          a: [x - 2, rowZ + 3.8],
+          b: [x + 2, rowZ + 3.8],
+        },
+      });
     });
   });
 
@@ -261,3 +179,4 @@ export function segmentIntersectsLotAABB(
 
   return tMin <= tMax;
 }
+

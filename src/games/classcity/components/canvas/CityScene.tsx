@@ -12,6 +12,7 @@ import type { AssetService } from '../../../../platform/assets/assetService';
 import type { SoundEffectsService } from '../../../../platform/audio/soundEffects';
 import type { TelemetryPort } from '../../../../platform/ports/telemetry';
 import { PerfGovernor } from '../../../../three-kit/PerfGovernor';
+import { WONDER_CENTER } from '../../config/cityLayout';
 import { useClassStore } from '../../state/useClassStore';
 import { CameraController } from './CameraController';
 import { ClassWonder } from './ClassWonder';
@@ -60,7 +61,7 @@ export interface CitySceneProps {
 /**
  * Main 3D scene assembling lighting, fog, PerfGovernor, Weather, RoadNetwork,
  * 36-40 StudentLots (with shops + wandering avatars), GiftBoxes, PatrolVehicle,
- * ClassWonder, and CameraController (Rule 8 & GĐ4-GĐ5).
+ * ClassWonder, and CameraController (Rule 8 & GÄ4-GÄ5).
  */
 export function CityScene({
   cameraRef,
@@ -207,13 +208,13 @@ export function CityScene({
         position={[38, 56, 32]}
         intensity={1.35}
         castShadow={enableShadows}
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-55}
-        shadow-camera-right={55}
-        shadow-camera-top={45}
-        shadow-camera-bottom={-45}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-70}
+        shadow-camera-right={70}
+        shadow-camera-top={60}
+        shadow-camera-bottom={-60}
         shadow-camera-near={10}
-        shadow-camera-far={130}
+        shadow-camera-far={190}
         shadow-bias={-0.0005}
       />
 
@@ -232,11 +233,13 @@ export function CityScene({
         <RoadNetwork emptyLots={layout.emptyLots} />
       </group>
 
-      <ClassWonder
-        wonderProgress={wonderProgress}
-        studentCount={Math.max(1, students.length)}
-        pointsPerLevel={pointsPerLevel}
-      />
+      <group position={WONDER_CENTER}>
+        <ClassWonder
+          wonderProgress={wonderProgress}
+          studentCount={Math.max(1, students.length)}
+          pointsPerLevel={pointsPerLevel}
+        />
+      </group>
 
       <GiftBoxes />
 

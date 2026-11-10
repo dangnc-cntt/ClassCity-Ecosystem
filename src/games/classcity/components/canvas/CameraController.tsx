@@ -6,8 +6,8 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useShallow } from 'zustand/react/shallow';
 import { useClassStore } from '../../state/useClassStore';
 
-const OVERVIEW_POS: [number, number, number] = [0, 42, 58];
-const OVERVIEW_TARGET: [number, number, number] = [0, 1.5, 0];
+const OVERVIEW_POS: [number, number, number] = [0, 52, 84];
+const OVERVIEW_TARGET: [number, number, number] = [0, 1.5, 4];
 
 /**
  * Manages the 3D camera with OrbitControls and smooth GSAP focus transitions (Rule 6.1, 6.4 & R5).
