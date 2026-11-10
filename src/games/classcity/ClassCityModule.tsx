@@ -408,7 +408,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
               key={canvasKey}
               dpr={[1, 1.5]}
               shadows
-              camera={{ position: [0, 42, 58], fov: 45, near: 0.5, far: 220 }}
+              camera={{ position: [0, 42, 58], fov: 45, near: 0.5, far: 600 }}
               gl={{ antialias: false, powerPreference: 'high-performance' }}
               onCreated={({ gl }) => {
                 canvasCleanupRef.current?.();

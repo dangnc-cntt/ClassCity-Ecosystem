@@ -15,6 +15,7 @@ import { PerfGovernor } from '../../../../three-kit/PerfGovernor';
 import { useClassStore } from '../../state/useClassStore';
 import { CameraController } from './CameraController';
 import { ClassWonder } from './ClassWonder';
+import { FloatingIsland } from './FloatingIsland';
 import { GiftBoxes } from './GiftBoxes';
 import { PatrolVehicle } from './PatrolVehicle';
 import { RoadNetwork } from './RoadNetwork';
@@ -180,7 +181,12 @@ export function CityScene({
   return (
     <>
       <color ref={bgColorRef} attach="background" args={['#E0F2FE']} />
-      <fog ref={fogRef} attach="fog" args={['#E0F2FE', 65, 145]} />
+      <fog ref={fogRef} attach="fog" args={['#E0F2FE', 130, 380]} />
+
+      <FloatingIsland reducedMotion={reducedMotion} />
+
+      {/* Soft warm bounce light from below so the island underside never reads as flat black */}
+      <directionalLight position={[14, -60, 24]} intensity={0.7} color="#FDE68A" />
 
       <PerfGovernor
         lowPowerMode={lowPowerMode}

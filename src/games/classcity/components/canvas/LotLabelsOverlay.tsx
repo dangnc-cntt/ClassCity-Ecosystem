@@ -65,6 +65,8 @@ export function LotLabelsOverlay({ cameraRef }: LotLabelsOverlayProps) {
       const container = containerRef.current;
       const camera = cameraRef.current;
       if (container && camera) {
+        // Hide rooftop labels when the camera dips below the island (they would show through the soil)
+        container.style.visibility = camera.position.y < 1 ? 'hidden' : 'visible';
         const width = container.clientWidth;
         const height = container.clientHeight;
         if (width > 0 && height > 0) {

@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { OrbitControls } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import gsap from 'gsap';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useShallow } from 'zustand/react/shallow';
@@ -16,6 +16,12 @@ export function CameraController() {
   const camera = useThree((s) => s.camera);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const tweenRef = useRef<gsap.core.Timeline | null>(null);
+  const interactingRef = useRef(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reducedMotion = useMemo(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
 
   const { selectedStudentId, calledStudentId, vehicleState, students, lots } =
     useClassStore(
@@ -119,17 +125,49 @@ export function CameraController() {
     };
   }, []);
 
+  // Idle showcase rotation: only while no student is focused and the vehicle is idle,
+  // paused while the user drags/zooms and resumed shortly after (skipped for reduced motion)
+  const shouldAutoRotate =
+    !reducedMotion &&
+    !selectedStudentId &&
+    !calledStudentId &&
+    vehicleState === 'idle';
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.autoRotate = shouldAutoRotate && !interactingRef.current;
+  });
+
+  useEffect(() => {
+    return () => {
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, []);
+
   return (
     <OrbitControls
       ref={controlsRef}
       makeDefault
       enableDamping
       dampingFactor={0.08}
+      autoRotate={false}
+      autoRotateSpeed={0.9}
       minDistance={10}
-      maxDistance={95}
+      maxDistance={200}
       minPolarAngle={0.18}
-      maxPolarAngle={Math.PI / 2 - 0.08}
+      maxPolarAngle={Math.PI * 0.62}
       target={OVERVIEW_TARGET}
+      onStart={() => {
+        interactingRef.current = true;
+        if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+      }}
+      onEnd={() => {
+        if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = setTimeout(() => {
+          interactingRef.current = false;
+        }, 3000);
+      }}
     />
   );
 }
