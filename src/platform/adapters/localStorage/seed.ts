@@ -46,6 +46,38 @@ export const SEED_SHOP_BRANCHES = [
   'gamecenter',
 ] as const;
 
+export const SEED_FENCE_ITEMS = [
+  'none',
+  'white_picket',
+  'brick_wall',
+  'hedge',
+  'stone_wall',
+] as const;
+
+export const SEED_TREE_ITEMS = [
+  'none',
+  'pine',
+  'sakura',
+  'fruit_tree',
+  'flower_bed',
+] as const;
+
+export const SEED_PET_ITEMS = [
+  'none',
+  'puppy',
+  'kitten',
+  'bunny',
+  'duckling',
+] as const;
+
+export const SEED_SIGN_ITEMS = [
+  'none',
+  'wooden_board',
+  'standing_banner',
+  'neon_post',
+  'mailbox_sign',
+] as const;
+
 export const SEED_AVATAR_IDS = [
   'avatar_knight',
   'avatar_mage',
@@ -134,6 +166,12 @@ export interface SeedStudentCityData {
   lotNumber: number;
   shopBranch: (typeof SEED_SHOP_BRANCHES)[number];
   shopColor: string;
+  lotItems: {
+    fence: (typeof SEED_FENCE_ITEMS)[number];
+    tree: (typeof SEED_TREE_ITEMS)[number];
+    pet: (typeof SEED_PET_ITEMS)[number];
+    sign: (typeof SEED_SIGN_ITEMS)[number];
+  };
   perks: Array<{
     id: string;
     kind: 'double_points' | 'ask_help' | 'lucky_point';
@@ -258,6 +296,11 @@ export function buildSeedDataset(seed = 20261109): SeedDataset {
         unlockedAssetIds: [...SEED_AVATAR_IDS],
       });
 
+      const fenceIdx = 1 + (Math.floor(rng() * (SEED_FENCE_ITEMS.length - 1)));
+      const treeIdx = 1 + (Math.floor(rng() * (SEED_TREE_ITEMS.length - 1)));
+      const petIdx = Math.floor(rng() * SEED_PET_ITEMS.length);
+      const signIdx = 1 + (Math.floor(rng() * (SEED_SIGN_ITEMS.length - 1)));
+
       studentStates[`${studentId}:classcity`] = {
         schemaVersion: 1,
         rev: 1,
@@ -265,6 +308,12 @@ export function buildSeedDataset(seed = 20261109): SeedDataset {
           lotNumber: code,
           shopBranch: SEED_SHOP_BRANCHES[branchIdx],
           shopColor: SEED_PASTEL_COLORS[colorIdx],
+          lotItems: {
+            fence: SEED_FENCE_ITEMS[fenceIdx]!,
+            tree: SEED_TREE_ITEMS[treeIdx]!,
+            pet: SEED_PET_ITEMS[petIdx]!,
+            sign: SEED_SIGN_ITEMS[signIdx]!,
+          },
           perks: [],
         },
       };

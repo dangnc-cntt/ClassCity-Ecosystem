@@ -5,6 +5,7 @@ import type { AssetService } from '../../../../platform/assets/assetService';
 import type { Lot } from '../../config/cityLayout';
 import { useClassStore } from '../../state/useClassStore';
 import { Avatar3D } from './Avatar3D';
+import { LotDecor } from './LotDecor';
 import { ShopModel } from './ShopModel';
 
 const selectionRingGeom = new THREE.RingGeometry(3.05, 3.35, 32);
@@ -121,6 +122,13 @@ export function StudentLot({
             rotation={[-Math.PI / 2, 0, 0]}
           />
         )}
+
+        <LotDecor
+          studentId={student.id}
+          items={student.lotItems}
+          jumpTriggerTimestamp={jumpTimestamp}
+          isCalled={isCalled}
+        />
 
         <ShopModel
           level={student.level}

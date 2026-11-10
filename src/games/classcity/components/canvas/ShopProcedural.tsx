@@ -10,7 +10,7 @@ import { buildTopperParts } from './ShopToppers';
 
 // Shared primitive templates across all procedural shop tiers (Rule 6.2 & 8.3)
 const SHOP_GEOM = {
-  foundation: new THREE.BoxGeometry(5.6, 0.28, 5.6),
+  foundation: new THREE.BoxGeometry(5.0, 0.28, 4.8),
   unitBox: new THREE.BoxGeometry(1, 1, 1),
   awningStripe: new THREE.BoxGeometry(0.62, 0.16, 1.3),
   door: new THREE.BoxGeometry(1.1, 1.85, 0.12),
@@ -20,8 +20,6 @@ const SHOP_GEOM = {
   dome: new THREE.SphereGeometry(1.65, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2),
   starOcta: new THREE.OctahedronGeometry(0.55, 0),
   auraRing: new THREE.RingGeometry(2.7, 3.05, 28),
-  sideTreeTrunk: new THREE.CylinderGeometry(0.12, 0.16, 0.8, 8),
-  sideTreeCrown: new THREE.ConeGeometry(0.55, 1.35, 8),
   lanternBulb: new THREE.SphereGeometry(0.16, 8, 8),
 };
 
@@ -145,7 +143,7 @@ function getMergedShopGeometry(
     }
   }
 
-  // Tier 2+ (Lv 5+): Glass display windows + right decorative tree
+  // Tier 2+ (Lv 5+): Glass display windows (yard trees are customizable items via LotDecor)
   if (!isTier1) {
     parts.push(
       {
@@ -157,16 +155,6 @@ function getMergedShopGeometry(
         geometry: SHOP_GEOM.glassWindow,
         color: '#7DD3FC',
         position: [1.25, 0.28 + 1.25, depth / 2 + 0.03],
-      },
-      {
-        geometry: SHOP_GEOM.sideTreeTrunk,
-        color: '#92400E',
-        position: [2.35, 0.68, 1.4],
-      },
-      {
-        geometry: SHOP_GEOM.sideTreeCrown,
-        color: '#16A34A',
-        position: [2.35, 1.43, 1.4],
       }
     );
   }
@@ -187,7 +175,7 @@ function getMergedShopGeometry(
     });
   }
 
-  // Tier 3+ (Lv 10+): Balcony, 2nd floor windows, left tree, warm entrance lanterns
+  // Tier 3+ (Lv 10+): Balcony, 2nd floor windows, warm entrance lanterns
   if (isTier3 || isTier4 || isTier5) {
     parts.push(
       {
@@ -204,16 +192,6 @@ function getMergedShopGeometry(
         geometry: SHOP_GEOM.glassWindow,
         color: '#7DD3FC',
         position: [1.15, 0.28 + 4.3, depth / 2 + 0.03],
-      },
-      {
-        geometry: SHOP_GEOM.sideTreeTrunk,
-        color: '#92400E',
-        position: [-2.35, 0.68, 1.4],
-      },
-      {
-        geometry: SHOP_GEOM.sideTreeCrown,
-        color: '#16A34A',
-        position: [-2.35, 1.43, 1.4],
       },
       {
         geometry: SHOP_GEOM.lanternBulb,

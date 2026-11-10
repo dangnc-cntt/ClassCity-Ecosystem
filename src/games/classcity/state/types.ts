@@ -6,6 +6,7 @@ import type {
   Tier,
 } from '../../../platform/types/models';
 import type { CityLayout } from '../config/cityLayout';
+import type { LotCustomization } from '../config/lotItemsCatalog';
 import type { GiftBoxSpot, PerkKind } from '../domain/perks';
 import type { AutoDrivePlan, VehicleState } from '../domain/vehicleFsm';
 
@@ -48,6 +49,7 @@ export interface StudentCityState {
   lotNumber: number;
   shopBranch: ShopBranch;
   shopColor: string;
+  lotItems: LotCustomization;
   perks: PerkCard[];
 }
 

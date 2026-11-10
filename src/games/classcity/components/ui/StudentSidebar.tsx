@@ -16,6 +16,11 @@ import { cn } from '../../../../lib/cn';
 import type { SoundEffectsService } from '../../../../platform/audio/soundEffects';
 import { t } from '../../../../platform/i18n';
 import { PASTEL_SHOP_COLORS } from '../../config/assetsRegistry';
+import {
+  LOT_ITEM_CATALOG,
+  type LotItemCategory,
+  type LotItemIdFor,
+} from '../../config/lotItemsCatalog';
 import { progressToNext } from '../../domain/levels';
 import { filterStudents } from '../../domain/selectors';
 import type { ShopBranch } from '../../state/types';
@@ -649,6 +654,45 @@ export function StudentSidebar({ useCases, sound }: StudentSidebarProps) {
                   {t('sidebar.hexInvalid')}
                 </p>
               )}
+            </div>
+
+            {/* Private Yard Items Catalog (Fence, Tree, Pet, Sign) */}
+            <div className="mt-3 rounded-xl border border-slate-800 bg-[var(--surface-elevated)] p-2.5">
+              <span className="block text-sm font-bold text-teal-300">
+                {t('sidebar.lotItemsTitle')}
+              </span>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {(
+                  ['fence', 'tree', 'pet', 'sign'] as const satisfies readonly LotItemCategory[]
+                ).map((cat) => (
+                  <div key={cat}>
+                    <label
+                      htmlFor={`student-yard-${cat}`}
+                      className="block text-xs font-bold text-[var(--ink-muted)]"
+                    >
+                      {t(`sidebar.lotItem.${cat}.label`)}
+                    </label>
+                    <select
+                      id={`student-yard-${cat}`}
+                      value={selectedStudent.lotItems[cat]}
+                      onChange={(e) => {
+                        void useCases?.changeLotItem(
+                          selectedStudent.id,
+                          cat,
+                          e.target.value as LotItemIdFor<typeof cat>
+                        );
+                      }}
+                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-[var(--ink-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+                    >
+                      {LOT_ITEM_CATALOG[cat].map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {t(item.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}

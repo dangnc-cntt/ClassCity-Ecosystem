@@ -25,8 +25,12 @@ import {
 import {
   buildSeedDataset,
   SEED_AVATAR_IDS,
+  SEED_FENCE_ITEMS,
   SEED_PASTEL_COLORS,
+  SEED_PET_ITEMS,
   SEED_SHOP_BRANCHES,
+  SEED_SIGN_ITEMS,
+  SEED_TREE_ITEMS,
   type SeedClassroomCityData,
   type SeedDataset,
   type SeedStudentCityData,
@@ -272,6 +276,10 @@ export function createRepositoryBundleFromDriver(
             const avatarId = SEED_AVATAR_IDS[index % SEED_AVATAR_IDS.length];
             const branch = SEED_SHOP_BRANCHES[index % SEED_SHOP_BRANCHES.length];
             const color = SEED_PASTEL_COLORS[index % SEED_PASTEL_COLORS.length];
+            const fence = SEED_FENCE_ITEMS[1 + (index % (SEED_FENCE_ITEMS.length - 1))]!;
+            const tree = SEED_TREE_ITEMS[1 + ((index * 3 + 1) % (SEED_TREE_ITEMS.length - 1))]!;
+            const pet = SEED_PET_ITEMS[(index + 1) % SEED_PET_ITEMS.length]!;
+            const sign = SEED_SIGN_ITEMS[1 + ((index * 2) % (SEED_SIGN_ITEMS.length - 1))]!;
 
             studentStateMap[studentId] = {
               schemaVersion: 1,
@@ -280,6 +288,7 @@ export function createRepositoryBundleFromDriver(
                 lotNumber: code,
                 shopBranch: branch,
                 shopColor: color,
+                lotItems: { fence, tree, pet, sign },
                 perks: [],
               },
             };

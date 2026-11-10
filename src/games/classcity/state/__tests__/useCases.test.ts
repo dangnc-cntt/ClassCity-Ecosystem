@@ -238,4 +238,33 @@ describe('GĐ3 State & Use-Cases (with InMemoryAdapter)', () => {
     expect(useClassStore.getState().activeClassroomId).toBe('class-5a');
     expect(useClassStore.getState().students).toHaveLength(36);
   });
+
+  it('customizes private yard items (fence, tree, pet, sign) within the allowed catalog and rejects unknown items', async () => {
+    const useCases = createClassCityUseCases(ctx);
+    await useCases.loadClassroom('class-5a');
+
+    const stu = useClassStore.getState().students[0]!;
+    expect(stu.lotItems).toBeDefined();
+
+    // Update all 4 categories with valid catalog items
+    expect(await useCases.changeLotItem(stu.id, 'fence', 'stone_wall')).toBe(true);
+    expect(await useCases.changeLotItem(stu.id, 'tree', 'sakura')).toBe(true);
+    expect(await useCases.changeLotItem(stu.id, 'pet', 'bunny')).toBe(true);
+    expect(await useCases.changeLotItem(stu.id, 'sign', 'neon_post')).toBe(true);
+
+    // Reject an item outside the allowed catalog
+    expect(await useCases.changeLotItem(stu.id, 'pet', 'dragon_invalid')).toBe(false);
+
+    // Reload classroom from repository -> all 4 customizations persist
+    await useCases.loadClassroom('class-5a');
+    const reloaded = useClassStore
+      .getState()
+      .students.find((s) => s.id === stu.id)!;
+    expect(reloaded.lotItems).toEqual({
+      fence: 'stone_wall',
+      tree: 'sakura',
+      pet: 'bunny',
+      sign: 'neon_post',
+    });
+  });
 });

@@ -12,6 +12,12 @@ import type { GameId, TenantBrand, Tier } from '../../../platform/types/models';
 import { setLocale, t } from '../../../platform/i18n';
 import { applyTheme } from '../../../platform/theme/theme';
 import { generateCityLayout } from '../config/cityLayout';
+import {
+  isValidLotItem,
+  sanitizeLotCustomization,
+  type LotItemCategory,
+  type LotItemIdFor,
+} from '../config/lotItemsCatalog';
 import { PASTEL_SHOP_COLORS } from '../config/assetsRegistry';
 import {
   DEFAULT_POINTS_PER_LEVEL,
@@ -124,6 +130,7 @@ export function createClassCityUseCases(
           shopColor:
             stEnv?.data?.shopColor ??
             PASTEL_SHOP_COLORS[idx % PASTEL_SHOP_COLORS.length]!,
+          lotItems: sanitizeLotCustomization(stEnv?.data?.lotItems, idx),
           perks: stEnv?.data?.perks ?? [],
         };
         const level = levelFromPoints(core.totalPoints, ppl);
@@ -611,6 +618,46 @@ export function createClassCityUseCases(
         studentId,
         'classcity',
         { shopColor: normalized }
+      );
+      return true;
+    },
+
+    /**
+     * Updates one yard item (`fence`, `tree`, `pet`, or `sign`) from the allowed catalog set.
+     */
+    async changeLotItem<K extends LotItemCategory>(
+      studentId: string,
+      category: K,
+      itemId: LotItemIdFor<K> | string
+    ): Promise<boolean> {
+      const state = store.getState();
+      if (!ctx.permissions.can('game:configure')) {
+        state.pushToast(t('permission.denied'), 'error');
+        return false;
+      }
+      if (!isValidLotItem(category, itemId)) {
+        state.pushToast(t('sidebar.lotItemInvalid'), 'warning');
+        return false;
+      }
+
+      const target = state.students.find((s) => s.id === studentId);
+      if (!target) return false;
+
+      const nextLotItems = {
+        ...target.lotItems,
+        [category]: itemId,
+      };
+
+      store.setState((prev) => ({
+        students: prev.students.map((s) =>
+          s.id === studentId ? { ...s, lotItems: nextLotItems } : s
+        ),
+      }));
+
+      await ctx.repos.gameStates.patchStudentState<StudentCityState>(
+        studentId,
+        'classcity',
+        { lotItems: nextLotItems }
       );
       return true;
     },
