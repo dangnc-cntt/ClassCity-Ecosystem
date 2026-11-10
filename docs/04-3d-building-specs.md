@@ -237,7 +237,24 @@ Các file do AI gen ra thường bị lệch tâm, quá nặng (30k–100k tris)
 
 ---
 
-## 6. Ghi chú mở rộng cho đợt kế tiếp
+## 6. Bộ Ảnh Concept Tham chiếu Sẵn sàng cho Image-to-3D
+
+Các ảnh concept độ phân giải `1024×1024` (nền trơn, góc 3/4 isometric, chừa sẵn bệ tròn trên đỉnh cho `Anchor_Topper`) đã được lưu ngay trong thư mục [`docs/references/building-concepts/`](references/building-concepts/):
+
+| Kỷ nguyên | Cấp đại diện | Tệp ảnh tham chiếu | Điểm nhấn thiết kế |
+|---|---|---|---|
+| **Kỷ nguyên 1 (Lv 1–4)** | Cấp 1 | [`level-01-starter-kiosk.jpg`](references/building-concepts/level-01-starter-kiosk.jpg) | Ki-ốt gỗ mộc, mái hiên sọc san hô, đèn bão, thùng gỗ & bánh xe hông |
+| **Kỷ nguyên 1 (Lv 1–4)** | Cấp 4 | [`level-04-cozy-corner-shop.jpg`](references/building-concepts/level-04-cozy-corner-shop.jpg) | Tường pastel ngọc + chân đá, hiên cột tròn, mái ngói có ô cửa áp mái & ống khói |
+| **Kỷ nguyên 2 (Lv 5–9)** | Cấp 7 | [`level-07-mansard-terrace-shop.jpg`](references/building-concepts/level-07-mansard-terrace-shop.jpg) | Tiệm kem bơ góc đá nổi, cửa sổ kính lồi, sân thượng con tiện & chòi kính bát giác |
+| **Kỷ nguyên 3 (Lv 10–14)** | Cấp 12 | [`level-12-paris-townhouse.jpg`](references/building-concepts/level-12-paris-townhouse.jpg) | Nhà 2 tầng kiểu Paris, ban công sắt, mái Mansard xanh ngọc viền vàng |
+| **Kỷ nguyên 4 (Lv 15–19)** | Cấp 17 | [`level-17-boutique-tower.jpg`](references/building-concepts/level-17-boutique-tower.jpg) | Tháp Boutique 3 tầng vát góc, vòm kính thông tầng, giàn pergola đèn lồng góc |
+| **Kỷ nguyên 5 (Lv 20)** | Cấp 20 | [`level-20-royal-palace-tower.jpg`](references/building-concepts/level-20-royal-palace-tower.jpg) | Siêu Tháp Hoàng Gia 4 tầng, sảnh 4 cột dát vàng, 4 chóp góc & mái vòm vương miện |
+
+> **Mẹo dùng với Meshy / Tripo3D / Rodin:** Khi tải `level-17-boutique-tower.jpg` vào công cụ Image-to-3D, nhắc thêm trong prompt phụ *"wrap matching arched windows onto the side wall"* để mặt hông phải đồng bộ chi tiết cửa sổ với các cấp khác.
+
+---
+
+## 7. Ghi chú mở rộng cho đợt kế tiếp
 Khi bạn đã có bộ nhà (hoặc muốn gen tiếp các thành phần khác), hãy báo tôi để viết tiếp bản đặc tả chi tiết & bộ prompt chuẩn khớp toạ độ game cho:
 1. **Hệ thống Item Khuôn viên (`public/shared-assets/models/prop_*.glb`):** Tường bao (`prop_fence_*`), Cây cối (`prop_tree_*`), Thú cưng (`prop_pet_*` kèm animation `Idle`/`Jump`), Biển hiệu (`prop_sign_*`).
 2. **Biểu tượng Ngành hàng (`public/games/classcity/models/topper_*.glb`):** Bánh kem, Cốc cà phê, Sách mở, Đầu mèo, Tay cầm game.
