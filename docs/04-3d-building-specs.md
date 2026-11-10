@@ -278,6 +278,73 @@ Các ảnh concept độ phân giải `1024×1024` (nền trơn, góc 3/4 isomet
    - Hiện tại [`ShopModel.tsx`](../src/games/classcity/components/canvas/ShopModel.tsx) tải tự động theo cấp độ (`shop_level_1.glb` … `shop_level_20.glb` — tức 1 dáng nhà chính cho mỗi cấp). Bạn hoàn toàn có thể phân bổ các phong cách trên vào các cấp khác nhau (ví dụ: Cấp 5 = *Machiya Nhật*, Cấp 6 = *Bakery Cổ tích*, Cấp 8 = *Nhà Kính*, Cấp 11 = *Địa Trung Hải*, Cấp 13 = *Tháp Thư viện*, Cấp 16 = *Arcade Vũ trụ*, Cấp 18 = *Lầu Bát giác Pha lê*).
    - Nếu sau này muốn **mỗi ngành hàng (`ShopBranch`: `bakery`, `cafe`, `bookstore`, `petshop`, `gamecenter`) dùng 1 bộ kiến trúc riêng ở cùng cấp độ**, chỉ cần quy ước tên file `shop_<branch>_t<1..5>.glb` (ví dụ `shop_cafe_t3.glb`, `shop_bookstore_t4.glb`) và báo agent nâng cấp [`ShopModel.tsx`](../src/games/classcity/components/canvas/ShopModel.tsx) ưu tiên tải theo ngành + tier trước khi fallback về `shop_level_${level}.glb`.
 
+### 7.2 Lộ trình Tiến hóa 5 Tier (`T1 → T5`) & Bộ Prompt cho Từng Phong cách
+
+Quy tắc ghép prompt cho công cụ **Image-to-3D / Text-to-3D**: luôn giữ tiền tố chung:
+> `Cozy stylized diorama game building, isometric 3/4 view (front bottom-left, right side bottom-right), isolated on flat seamless #E8ECEF light gray studio backdrop with soft base contact shadow only, warm honey-gold lit leaded windows, clean beveled toy-diorama geometry, empty flat circular pedestal pad on top apex for Anchor_Topper. No grass terrain slab, no fence, no loose trees, no characters, no text.`
+
+#### A. Ngành `bakery` — Tiệm Bánh Cổ tích Mái Kem (Đã có ảnh `T1`, `T2`)
+- **Tier 1 (Lv 1–4) — Quầy Bánh Cổ tích Khởi nghiệp (ĐÃ CÓ ẢNH):** [`style-bakery-t1-kiosk.jpg`](references/building-concepts/style-bakery-t1-kiosk.jpg) — quầy vòm gỗ có cửa chớp mở bán, đèn bão treo, chân đá cuội, mái ngói san hô viền kem sóng & ống khói mini.
+- **Tier 2 (Lv 5–9) — Tiệm Bánh Mái Chuông Cổ tích (ĐÃ CÓ ẢNH):** [`style-bakery-storybook-cottage.jpg`](references/building-concepts/style-bakery-storybook-cottage.jpg) — tiệm 1 tầng trọn vẹn có bồn hoa cửa sổ, cửa vòm Hobbit & gác áp mái nhỏ.
+- **Tier 3 (Lv 10–14) — Tiệm Bánh 2 Tầng Ban công Hoa:**
+  > `[Style Prefix] + Fairytale Storybook Bakery Tier 3 two-story townhouse, evolving from Tier 2 coral scalloped bell roof and wavy buttercream eaves; cobblestone plinth, oak double doors on stone steps, second floor strawberry-cream stucco with wrap-around curved timber balcony and flower planters, tall twin-flue brick chimney.`
+- **Tier 4 (Lv 15–19) — Tháp Tiệm Bánh 3 Tầng Có Chóp Góc:**
+  > `[Style Prefix] + Fairytale Storybook Bakery Tier 4 three-story stepped patisserie tower; 1st floor grand arched oak doorway and amber bay windows, 2nd floor wrap-around balcony with rounded corner turret bay, setback 3rd floor octagonal strawberry-cream penthouse under sweeping double-tier coral scalloped roof with cream icing eaves.`
+- **Tier 5 (Lv 20) — Cung điện Bánh Hoàng gia 4 Tầng:**
+  > `[Style Prefix] + Fairytale Storybook Bakery Tier 5 four-story royal confectionery palace wonder; monumental cobblestone portico, two tiers of ornate carved wooden balconies, arched golden-lit windows on all walls, twin miniature coral spice-turret pinnacles on 3rd-floor setback corners, 4th-story octagonal lantern crowned by gilded cream-trimmed coral dome.`
+
+#### B. Ngành `cafe` — Trà thất / Quán Cà phê Machiya Nhật (Đã có ảnh `T3`)
+- **Tier 1 (Lv 1–4) — Xe / Quầy Trà Đạo Gỗ Yatai:**
+  > `[Style Prefix] + Japanese Machiya Cafe Tier 1 tiny wooden tea stall kiosk (Yatai), single compact dark walnut timber counter booth, warm shoji lattice shutter hatch at bottom-left, hanging twin paper lanterns, curved mossy-slate single gable roof with cedar ridge beam and circular slate apex pad.`
+- **Tier 2 (Lv 5–9) — Quán Trà 1 Tầng Hiên Engawa:**
+  > `[Style Prefix] + Japanese Machiya Cafe Tier 2 cozy single-story wooden teahouse, dark walnut timber frame with cream plaster panels, engawa front porch deck with sliding glowing shoji glass doors and paper lanterns, mossy-slate upturned pagoda roof overhang and circular apex pad.`
+- **Tier 3 (Lv 10–14) — Trà thất Machiya 2 Tầng (ĐÃ CÓ ẢNH):** [`style-cafe-japanese-machiya.jpg`](references/building-concepts/style-cafe-japanese-machiya.jpg).
+- **Tier 4 (Lv 15–19) — Trà Lầu 3 Tầng Mái Chồng Diêm:**
+  > `[Style Prefix] + Japanese Machiya Cafe Tier 4 three-story traditional timber tea tower, triple tiered upturned mossy-slate pagoda eaves, two upper levels of glowing shoji windows and carved cedar balconies, ornate golden-tipped timber brackets and wide engawa veranda.`
+- **Tier 5 (Lv 20) — Đại Trà Các 4 Tầng Hoàng gia:**
+  > `[Style Prefix] + Japanese Machiya Cafe Tier 5 monumental four-story grand Imperial tea pagoda pavilion, majestic stone foundation plinth, triple wrap-around dark walnut verandas with warm lanterns, gilded roof ridge ornaments on four layered curved mossy-slate pagoda roofs converging to top circular stone pedestal.`
+
+#### C. Ngành `bookstore` — Tháp Thư viện Thiên văn Trụ Tròn (Đã có ảnh `T3`)
+- **Tier 1 (Lv 1–4) — Quầy Sách Tròn Vòm Cổ điển:**
+  > `[Style Prefix] + Cylindrical Owl Observatory Bookstore Tier 1 tiny circular sandstone book kiosk, cozy rounded wooden book stall with front arched oak door and curved warm lantern window showing mini bookshelves, conical cobalt-blue fish-scale roof truncated into flat cream pedestal.`
+- **Tier 2 (Lv 5–9) — Nhà Sách Thiên văn 1 Tầng Thân Trụ:**
+  > `[Style Prefix] + Cylindrical Owl Observatory Bookstore Tier 2 single-story round sandstone and sky-blue stucco library dome cottage, projecting gabled oak entry porch with twin sconces, glowing arched cathedral book windows wrapping front and right wall, cobalt conical roof.`
+- **Tier 3 (Lv 10–14) — Tháp Thư viện Tròn Ban công Ngắm sao (ĐÃ CÓ ẢNH):** [`style-bookstore-owl-observatory.jpg`](references/building-concepts/style-bookstore-owl-observatory.jpg).
+- **Tier 4 (Lv 15–19) — Đại Tháp Sách 3 Tầng Vòm Đôi:**
+  > `[Style Prefix] + Cylindrical Owl Observatory Bookstore Tier 4 tall three-story stepped round stone-and-sky-blue observatory tower, grand ground arched portico, wrap-around 2nd-floor brass gallery balcony, setback 3rd-floor circular clerestory glass drum under ribbed cobalt-blue and gold conical spire.`
+- **Tier 5 (Lv 20) — Tổng Thư viện Thiên văn 4 Tầng:**
+  > `[Style Prefix] + Cylindrical Owl Observatory Bookstore Tier 5 grand four-story Celestial Observatory Palace tower, majestic sandstone colonnade rotunda base, twin flanking miniature rounded turret bays on 3rd tier, soaring golden-ribbed cobalt dome pavilion at 4th story with brass astrolabe cornice rings.`
+
+#### D. Ngành `petshop` — Nhà Kính Vườn Thảo mộc Sinh thái (Đã có ảnh `T2`)
+- **Tier 1 (Lv 1–4) — Chòi Kính Thú cưng Khởi nghiệp:**
+  > `[Style Prefix] + Botanical Glass Conservatory Petshop Tier 1 mini terracotta-brick and sage-mint arched glass garden shed, compact oak entrance door at front bottom-left, translucent curved glass roof with glowing warm sunbeams inside.`
+- **Tier 2 (Lv 5–9) — Nhà Kính Vườn Thảo mộc 1 Tầng (ĐÃ CÓ ẢNH):** [`style-petshop-botanical-greenhouse.jpg`](references/building-concepts/style-petshop-botanical-greenhouse.jpg).
+- **Tier 3 (Lv 10–14) — Dinh thự Nhà Kính 2 Tầng Gác Mái:**
+  > `[Style Prefix] + Botanical Glass Conservatory Petshop Tier 3 two-story sage-mint iron and honey-oak conservatory villa, 1st floor brick base with grand glass portal, 2nd floor recessed glass terrace balcony and tall arched vaulted greenhouse upper roof.`
+- **Tier 4 (Lv 15–19) — Tổ hợp Bách thú Kính Vòm 3 Tầng:**
+  > `[Style Prefix] + Botanical Glass Conservatory Petshop Tier 4 three-story stepped Victorian crystal-and-mint conservatory complex, cross-vaulted glass wing gables, twin upper balconies overflowing with built-in planter boxes, glowing amber glass cupola dome.`
+- **Tier 5 (Lv 20) — Cung điện Pha lê Sinh thái 4 Tầng:**
+  > `[Style Prefix] + Botanical Glass Conservatory Petshop Tier 5 monumental four-story Imperial Crystal Botanical Palace, curved mint-gold ironwork ribs, tiered backlit stained-glass conservatory vaults and corner atrium pavilions rising to an ornate central domed skylight pedestal.`
+
+#### E. Ngành `gamecenter` — Studio Arcade Retro-Vũ trụ (Đã có ảnh `T3`)
+- **Tier 1 (Lv 1–4) — Ki-ốt Game Kén Không gian Mini:**
+  > `[Style Prefix] + Cosmic Arcade Studio Pod Tier 1 tiny pearl-white and pastel-indigo space-age arcade booth, single rounded pod silhouette with glowing cyan glass front visor door, curved mini corner screen glass glowing neon amber.`
+- **Tier 2 (Lv 5–9) — Tiệm Game 1 Tầng Cửa Vòm Neon:**
+  > `[Style Prefix] + Cosmic Arcade Studio Pod Tier 2 single-story retro-futuristic space lounge, smooth chamfered white-and-lavender shell, glowing cyan Googie entrance visor canopy, wide illuminated corner glass showcase revealing cozy glowing arcade cabinets inside.`
+- **Tier 3 (Lv 10–14) — Studio Arcade Vũ trụ 2 Tầng (ĐÃ CÓ ẢNH):** [`style-gamecenter-cosmic-arcade.jpg`](references/building-concepts/style-gamecenter-cosmic-arcade.jpg).
+- **Tier 4 (Lv 15–19) — Tháp E-Sports Thiên hà 3 Tầng:**
+  > `[Style Prefix] + Cosmic Arcade Studio Pod Tier 4 three-story sleek rounded pearl-white and indigo Cosmic Esports tower, stacked wrap-around glowing cyan/amber panoramic glass ribbons, cantilevered observation terrace on 3rd tier, stepped brushed-gold radar dome crown.`
+- **Tier 5 (Lv 20) — Trạm Vũ trụ Giải trí Tối thượng 4 Tầng:**
+  > `[Style Prefix] + Cosmic Arcade Studio Pod Tier 5 four-story grand Retro-Cosmic Citadel spire, sweeping twin-story glowing cyan glass atrium entrance, multi-tiered circular cantilevered sky decks with gold fin rings, glowing lavender crystal core and ringed radar rotunda summit.`
+
+#### F. Hai Phong cách Mở rộng Thế giới (`Mediterranean Sun Villa` & `Crystal Sky Pavilion`)
+- **Biệt thự Nắng Địa Trung Hải** (ĐÃ CÓ `T3`: [`style-mediterranean-sun-villa.jpg`](references/building-concepts/style-mediterranean-sun-villa.jpg)):
+  - **T1–T2**: thu gọn còn **nhà 1 tầng hiên 2 vòm** hoặc **3 vòm**, mái ngói ống đất nung không cầu thang ngoài.
+  - **T4–T5**: thêm **tháp chuông góc (bell-tower loggia)** tầng 3–4 với giàn hoa giấy tích hợp trên lan can đá vôi & vòm đài vọng cảnh trên mái đất nung.
+- **Lầu Bát giác Pha lê Đảo Bay** (ĐÃ CÓ `T4`: [`style-crystal-sky-pavilion.jpg`](references/building-concepts/style-crystal-sky-pavilion.jpg)):
+  - **T1–T3**: giảm xuống **đền kính 1 tầng hình bát giác** (`T1–T2`) rồi lên **lầu bát giác 2 tầng cột mảnh** (`T3`) bỏ 4 sườn bay phụ.
+  - **T5 (Lv 20)**: nâng thành **Thánh điện Pha lê 4 tầng (3 tầng kính chồng + tầng đế bát giác)** có **8 sườn bay dát vàng** hội tụ lên mái chóp ngọc bích vương miện.
+
 ---
 
 ## 8. Ghi chú mở rộng cho đợt kế tiếp
