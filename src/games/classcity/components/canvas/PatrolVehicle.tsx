@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { useShallow } from 'zustand/react/shallow';
 import type { SoundEffectsService } from '../../../../platform/audio/soundEffects';
 import { BlobShadow } from '../../../../three-kit/BlobShadow';
+import { mergeColoredGeometries } from '../../../../three-kit/mergeColoredGeometries';
 import { checkGiftBoxCollision } from '../../domain/perks';
 import { findNearestLot } from '../../domain/selectors';
 import type { VehicleKind } from '../../state/types';
@@ -72,66 +73,108 @@ const VEH_MAT = {
   }),
 };
 
+const MERGED_CAR_GEOM = mergeColoredGeometries([
+  { geometry: VEH_GEOM.carChassis, color: '#FACC15', position: [0, 0.32, 0] },
+  { geometry: VEH_GEOM.carCabin, color: '#BAE6FD', position: [-0.1, 0.85, 0] },
+  { geometry: VEH_GEOM.beacon, color: '#EF4444', position: [-0.1, 1.22, 0] },
+  {
+    geometry: VEH_GEOM.headlight,
+    color: '#FEF08A',
+    position: [1.31, 0.38, 0.46],
+  },
+  {
+    geometry: VEH_GEOM.headlight,
+    color: '#FEF08A',
+    position: [1.31, 0.38, -0.46],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [-0.78, 0, 0.74],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [0.78, 0, 0.74],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [-0.78, 0, -0.74],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [0.78, 0, -0.74],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+]);
+
+const MERGED_AMB_GEOM = mergeColoredGeometries([
+  { geometry: VEH_GEOM.ambBody, color: '#F8FAFC', position: [0, 0.58, 0] },
+  { geometry: VEH_GEOM.carCabin, color: '#BAE6FD', position: [0.72, 0.72, 0] },
+  {
+    geometry: VEH_GEOM.ambCrossH,
+    color: '#EF4444',
+    position: [-0.25, 0.68, 0.79],
+  },
+  {
+    geometry: VEH_GEOM.ambCrossV,
+    color: '#EF4444',
+    position: [-0.25, 0.68, 0.79],
+  },
+  {
+    geometry: VEH_GEOM.ambCrossH,
+    color: '#EF4444',
+    position: [-0.25, 0.68, -0.79],
+  },
+  {
+    geometry: VEH_GEOM.ambCrossV,
+    color: '#EF4444',
+    position: [-0.25, 0.68, -0.79],
+  },
+  { geometry: VEH_GEOM.beacon, color: '#EF4444', position: [0.5, 1.25, 0.35] },
+  { geometry: VEH_GEOM.beacon, color: '#3B82F6', position: [0.5, 1.25, -0.35] },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [-0.85, 0, 0.78],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [0.85, 0, 0.78],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [-0.85, 0, -0.78],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    geometry: VEH_GEOM.wheel,
+    color: '#1E293B',
+    position: [0.85, 0, -0.78],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+]);
+
+const VEH_VERTEX_MAT = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.35,
+  metalness: 0.18,
+});
+
 function VehicleProceduralMesh({ kind }: { kind: VehicleKind }) {
   if (kind === 'ambulance') {
     return (
       <group position={[0, 0.32, 0]}>
-        <mesh
-          geometry={VEH_GEOM.ambBody}
-          material={VEH_MAT.ambWhite}
-          position={[0, 0.58, 0]}
-        />
-        <mesh
-          geometry={VEH_GEOM.carCabin}
-          material={VEH_MAT.carGlass}
-          position={[0.72, 0.72, 0]}
-        />
-        {/* Red Cross on both sides */}
-        <mesh
-          geometry={VEH_GEOM.ambCrossH}
-          material={VEH_MAT.ambRed}
-          position={[-0.25, 0.68, 0.79]}
-        />
-        <mesh
-          geometry={VEH_GEOM.ambCrossV}
-          material={VEH_MAT.ambRed}
-          position={[-0.25, 0.68, 0.79]}
-        />
-        <mesh
-          geometry={VEH_GEOM.ambCrossH}
-          material={VEH_MAT.ambRed}
-          position={[-0.25, 0.68, -0.79]}
-        />
-        <mesh
-          geometry={VEH_GEOM.ambCrossV}
-          material={VEH_MAT.ambRed}
-          position={[-0.25, 0.68, -0.79]}
-        />
-        {/* Siren beacons */}
-        <mesh
-          geometry={VEH_GEOM.beacon}
-          material={VEH_MAT.ambRed}
-          position={[0.5, 1.25, 0.35]}
-        />
-        <mesh
-          geometry={VEH_GEOM.beacon}
-          material={VEH_MAT.ambBlue}
-          position={[0.5, 1.25, -0.35]}
-        />
-        {[
-          [-0.85, 0, 0.78],
-          [0.85, 0, 0.78],
-          [-0.85, 0, -0.78],
-          [0.85, 0, -0.78],
-        ].map(([wx, wy, wz], i) => (
-          <mesh
-            key={`amb-w-${i}`}
-            geometry={VEH_GEOM.wheel}
-            material={VEH_MAT.tireDark}
-            position={[wx!, wy!, wz!]}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-        ))}
+        <mesh geometry={MERGED_AMB_GEOM} material={VEH_VERTEX_MAT} />
       </group>
     );
   }
@@ -154,48 +197,10 @@ function VehicleProceduralMesh({ kind }: { kind: VehicleKind }) {
     );
   }
 
-  // Default: Cute yellow patrol car
+  // Default: Cute yellow patrol car (single merged mesh = 1 draw call)
   return (
     <group position={[0, 0.32, 0]}>
-      <mesh
-        geometry={VEH_GEOM.carChassis}
-        material={VEH_MAT.carYellow}
-        position={[0, 0.32, 0]}
-      />
-      <mesh
-        geometry={VEH_GEOM.carCabin}
-        material={VEH_MAT.carGlass}
-        position={[-0.1, 0.85, 0]}
-      />
-      <mesh
-        geometry={VEH_GEOM.beacon}
-        material={VEH_MAT.ambRed}
-        position={[-0.1, 1.22, 0]}
-      />
-      <mesh
-        geometry={VEH_GEOM.headlight}
-        material={VEH_MAT.headlightGlow}
-        position={[1.31, 0.38, 0.46]}
-      />
-      <mesh
-        geometry={VEH_GEOM.headlight}
-        material={VEH_MAT.headlightGlow}
-        position={[1.31, 0.38, -0.46]}
-      />
-      {[
-        [-0.78, 0, 0.74],
-        [0.78, 0, 0.74],
-        [-0.78, 0, -0.74],
-        [0.78, 0, -0.74],
-      ].map(([wx, wy, wz], i) => (
-        <mesh
-          key={`car-w-${i}`}
-          geometry={VEH_GEOM.wheel}
-          material={VEH_MAT.tireDark}
-          position={[wx!, wy!, wz!]}
-          rotation={[Math.PI / 2, 0, 0]}
-        />
-      ))}
+      <mesh geometry={MERGED_CAR_GEOM} material={VEH_VERTEX_MAT} />
     </group>
   );
 }

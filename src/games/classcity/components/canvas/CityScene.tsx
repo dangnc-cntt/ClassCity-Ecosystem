@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useShallow } from 'zustand/react/shallow';
@@ -42,6 +48,7 @@ const WEATHER_PRESETS = {
 } as const;
 
 export interface CitySceneProps {
+  cameraRef?: MutableRefObject<THREE.Camera | null>;
   assets?: AssetService;
   telemetry?: TelemetryPort;
   sound?: SoundEffectsService;
@@ -55,6 +62,7 @@ export interface CitySceneProps {
  * ClassWonder, and CameraController (Rule 8 & GĐ4-GĐ5).
  */
 export function CityScene({
+  cameraRef,
   assets,
   telemetry,
   sound,
@@ -62,6 +70,16 @@ export function CityScene({
   onCollectGiftBox,
 }: CitySceneProps) {
   const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    if (cameraRef) {
+      cameraRef.current = camera;
+    }
+    return () => {
+      if (cameraRef) {
+        cameraRef.current = null;
+      }
+    };
+  }, [camera, cameraRef]);
   const [qualityTier, setQualityTier] = useState<'high' | 'medium' | 'low'>('high');
   const [nearLotIds, setNearLotIds] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -93,12 +111,14 @@ export function CityScene({
         return;
       }
       const cx = camera.position.x;
+      const cy = camera.position.y;
       const cz = camera.position.z;
       const next = new Set<number>();
       for (const lot of layout.lots) {
         const dx = lot.position[0] - cx;
+        const dy = lot.position[1] - cy;
         const dz = lot.position[2] - cz;
-        if (dx * dx + dz * dz <= NEAR_CAMERA_DIST_SQ) {
+        if (dx * dx + dy * dy + dz * dz <= NEAR_CAMERA_DIST_SQ) {
           next.add(lot.id);
         }
       }

@@ -12,12 +12,14 @@ import {
 import { Canvas } from '@react-three/fiber';
 import confetti from 'canvas-confetti';
 import { X } from 'lucide-react';
+import type * as THREE from 'three';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '../../lib/cn';
 import { createSoundEffects } from '../../platform/audio/soundEffects';
 import { registerMessages, t } from '../../platform/i18n';
 import type { GameContext } from '../../platform/types/manifest';
 import { CityScene } from './components/canvas/CityScene';
+import { LotLabelsOverlay } from './components/canvas/LotLabelsOverlay';
 import { CalloutModal } from './components/ui/CalloutModal';
 import { StudentSidebar } from './components/ui/StudentSidebar';
 import { TopToolbar } from './components/ui/TopToolbar';
@@ -101,6 +103,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
   const [canvasKey, setCanvasKey] = useState(0);
   const [entitlementVersion, setEntitlementVersion] = useState(0);
   const canvasCleanupRef = useRef<(() => void) | null>(null);
+  const cameraRef = useRef<THREE.Camera | null>(null);
 
   const latestCtxRef = useRef<GameContext | undefined>(ctx);
   latestCtxRef.current = ctx;
@@ -439,6 +442,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
               }}
             >
               <CityScene
+                cameraRef={cameraRef}
                 assets={ctx?.assets}
                 telemetry={ctx?.telemetry}
                 sound={sound}
@@ -450,6 +454,7 @@ export function ClassCityModule({ ctx }: ClassCityModuleProps) {
                 }}
               />
             </Canvas>
+            <LotLabelsOverlay cameraRef={cameraRef} />
           </CanvasErrorBoundary>
         )}
       </section>

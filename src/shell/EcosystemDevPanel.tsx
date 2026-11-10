@@ -35,6 +35,11 @@ export interface EcosystemDevPanelProps {
 export function EcosystemDevPanel({ ctx, localeTick }: EcosystemDevPanelProps) {
   void localeTick;
 
+  const isDevPanelEnabled =
+    Boolean(import.meta.env?.DEV) ||
+    typeof window === 'undefined' ||
+    new URLSearchParams(window.location.search).get('dev') === '1';
+
   const [expanded, setExpanded] = useState(false);
   const [isPro, setIsPro] = useState(() =>
     ctx.entitlements.has('classcity.multi_class')
@@ -151,6 +156,10 @@ export function EcosystemDevPanel({ ctx, localeTick }: EcosystemDevPanelProps) {
       }
     );
   };
+
+  if (!isDevPanelEnabled) {
+    return null;
+  }
 
   if (!expanded) {
     return (

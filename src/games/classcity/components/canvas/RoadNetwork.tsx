@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
+import { mergeColoredGeometries } from '../../../../three-kit/mergeColoredGeometries';
 import {
   GROUND_DEPTH,
   GROUND_WIDTH,
@@ -49,7 +50,60 @@ const ENV_MAT = {
     emissive: '#F59E0B',
     emissiveIntensity: 0.85,
   }),
+  mergedGround: new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.85,
+  }),
 };
+
+// Pre-merge static grass ground, asphalt roads, roundabout, and sidewalks into 1 draw call (Rule 8.9)
+const STATIC_ROAD_BASE_GEOM = mergeColoredGeometries([
+  {
+    geometry: ENV_GEOM.ground,
+    color: '#4ADE80',
+    rotation: [-Math.PI / 2, 0, 0],
+  },
+  { geometry: ENV_GEOM.roadHoriz, color: '#334155', position: [0, 0.04, -22] },
+  { geometry: ENV_GEOM.roadHoriz, color: '#334155', position: [0, 0.04, 22] },
+  { geometry: ENV_GEOM.roadHoriz, color: '#334155', position: [0, 0.04, 0] },
+  { geometry: ENV_GEOM.roadVert, color: '#334155', position: [-35, 0.04, 0] },
+  { geometry: ENV_GEOM.roadVert, color: '#334155', position: [35, 0.04, 0] },
+  {
+    geometry: ENV_GEOM.roundaboutAsphalt,
+    color: '#334155',
+    position: [0, 0.045, 0],
+  },
+  {
+    geometry: ENV_GEOM.sidewalkStripH,
+    color: '#E2E8F0',
+    position: [0, 0.07, -26],
+  },
+  {
+    geometry: ENV_GEOM.sidewalkStripH,
+    color: '#E2E8F0',
+    position: [0, 0.07, -18],
+  },
+  {
+    geometry: ENV_GEOM.sidewalkStripH,
+    color: '#E2E8F0',
+    position: [0, 0.07, 18],
+  },
+  {
+    geometry: ENV_GEOM.sidewalkStripH,
+    color: '#E2E8F0',
+    position: [0, 0.07, 26],
+  },
+  {
+    geometry: ENV_GEOM.sidewalkStripV,
+    color: '#E2E8F0',
+    position: [-39, 0.07, 0],
+  },
+  {
+    geometry: ENV_GEOM.sidewalkStripV,
+    color: '#E2E8F0',
+    position: [39, 0.07, 0],
+  },
+]);
 
 interface PropTransform {
   position: [number, number, number];
@@ -132,102 +186,29 @@ export function RoadNetwork({ emptyLots = [] }: RoadNetworkProps) {
 
   return (
     <group name="RoadNetwork">
-      {/* Main green grass ground */}
+      {/* Merged grass ground, asphalt loop, roundabout, and sidewalks (1 Draw Call) */}
       <mesh
-        geometry={ENV_GEOM.ground}
-        material={ENV_MAT.grass}
-        rotation={[-Math.PI / 2, 0, 0]}
+        geometry={STATIC_ROAD_BASE_GEOM}
+        material={ENV_MAT.mergedGround}
         receiveShadow
       />
 
-      {/* Rectangular asphalt loop + center avenue */}
-      <mesh
-        geometry={ENV_GEOM.roadHoriz}
-        material={ENV_MAT.asphalt}
-        position={[0, 0.04, -22]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.roadHoriz}
-        material={ENV_MAT.asphalt}
-        position={[0, 0.04, 22]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.roadHoriz}
-        material={ENV_MAT.asphalt}
-        position={[0, 0.04, 0]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.roadVert}
-        material={ENV_MAT.asphalt}
-        position={[-35, 0.04, 0]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.roadVert}
-        material={ENV_MAT.asphalt}
-        position={[35, 0.04, 0]}
-        receiveShadow
-      />
-
-      {/* Central Roundabout asphalt */}
-      <mesh
-        geometry={ENV_GEOM.roundaboutAsphalt}
-        material={ENV_MAT.asphalt}
-        position={[0, 0.045, 0]}
-        receiveShadow
-      />
-
-      {/* Sidewalks along North/South/East/West lot rows */}
-      <mesh
-        geometry={ENV_GEOM.sidewalkStripH}
-        material={ENV_MAT.sidewalk}
-        position={[0, 0.07, -26]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.sidewalkStripH}
-        material={ENV_MAT.sidewalk}
-        position={[0, 0.07, -18]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.sidewalkStripH}
-        material={ENV_MAT.sidewalk}
-        position={[0, 0.07, 18]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.sidewalkStripH}
-        material={ENV_MAT.sidewalk}
-        position={[0, 0.07, 26]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.sidewalkStripV}
-        material={ENV_MAT.sidewalk}
-        position={[-39, 0.07, 0]}
-        receiveShadow
-      />
-      <mesh
-        geometry={ENV_GEOM.sidewalkStripV}
-        material={ENV_MAT.sidewalk}
-        position={[39, 0.07, 0]}
-        receiveShadow
-      />
-
-      {/* Empty lots rendered as green mini-parks */}
-      {emptyLots.map((lot) => (
-        <mesh
-          key={`empty-park-${lot.id}`}
+      {/* Empty lots rendered as instanced green mini-parks (1 Draw Call) */}
+      {emptyLots.length > 0 && (
+        <Instances
+          limit={emptyLots.length}
           geometry={ENV_GEOM.emptyParkGrass}
           material={ENV_MAT.parkGrass}
-          position={[lot.position[0], 0.09, lot.position[2]]}
           receiveShadow
-        />
-      ))}
+        >
+          {emptyLots.map((lot) => (
+            <Instance
+              key={`empty-park-${lot.id}`}
+              position={[lot.position[0], 0.09, lot.position[2]]}
+            />
+          ))}
+        </Instances>
+      )}
 
       {/* Instanced White Road Markings (1 Draw Call) */}
       <Instances

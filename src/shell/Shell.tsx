@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   Clock,
@@ -135,6 +135,7 @@ export function Shell({ initialContext, startInHub = false }: ShellProps) {
   // Listen to cross-game navigation, classroom switches, audio mute, and entitlement updates (Rule R5)
   useEffect(() => {
     const unsubNav = ctx.bus.on('HUB:NAVIGATE', (evt) => {
+      if (evt.source.instanceId !== ctx.bus.instanceId) return;
       if (evt.payload.target === 'hub') {
         setActiveGameId(null);
       } else if (findGameManifest(evt.payload.target)) {
@@ -162,12 +163,20 @@ export function Shell({ initialContext, startInHub = false }: ShellProps) {
     };
   }, [ctx.bus, ctx.entitlements]);
 
-  // Dispose owned platform services only when the entire Shell unmounts
+  // Dispose owned platform services only on true Shell unmount (cancelling React StrictMode simulated unmount)
+  const disposeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    if (disposeTimerRef.current !== null) {
+      clearTimeout(disposeTimerRef.current);
+      disposeTimerRef.current = null;
+    }
     return () => {
       if (ownedServices) {
-        ownedServices.assets.dispose();
-        ownedServices.bus.dispose();
+        disposeTimerRef.current = setTimeout(() => {
+          ownedServices.assets.dispose();
+          ownedServices.bus.dispose();
+          disposeTimerRef.current = null;
+        }, 0);
       }
     };
   }, [ownedServices]);

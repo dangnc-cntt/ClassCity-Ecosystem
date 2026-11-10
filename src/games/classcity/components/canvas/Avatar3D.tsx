@@ -25,6 +25,7 @@ export interface Avatar3DProps {
   lotRotationY: number;
   jumpTriggerTimestamp?: number;
   isCalled?: boolean;
+  showBlobShadow?: boolean;
   assets?: AssetService;
 }
 
@@ -41,6 +42,7 @@ export function Avatar3D({
   lotRotationY,
   jumpTriggerTimestamp = 0,
   isCalled = false,
+  showBlobShadow = true,
   assets,
 }: Avatar3DProps) {
   const rootRef = useRef<THREE.Group>(null);
@@ -206,7 +208,7 @@ export function Avatar3D({
 
   return (
     <group ref={rootRef} position={[0, 0, 3.8]}>
-      <BlobShadow radius={0.44} y={0.03} />
+      {showBlobShadow && <BlobShadow radius={0.44} y={0.03} />}
       <group ref={bodyRef}>
         {gltfData ? (
           <primitive object={gltfData.clone} />

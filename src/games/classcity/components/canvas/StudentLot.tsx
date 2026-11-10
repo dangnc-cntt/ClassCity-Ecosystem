@@ -1,12 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useShallow } from 'zustand/react/shallow';
 import type { AssetService } from '../../../../platform/assets/assetService';
 import type { Lot } from '../../config/cityLayout';
 import { useClassStore } from '../../state/useClassStore';
 import { Avatar3D } from './Avatar3D';
-import { getProceduralShopHeight } from './ShopProcedural';
 import { ShopModel } from './ShopModel';
 
 const selectionRingGeom = new THREE.RingGeometry(3.05, 3.35, 32);
@@ -73,7 +71,6 @@ export function StudentLot({
   const {
     student,
     isSelected,
-    isHovered,
     isCalled,
     jumpTimestamp,
     selectStudent,
@@ -85,7 +82,6 @@ export function StudentLot({
       return {
         student: found,
         isSelected: state.selectedStudentId === studentId,
-        isHovered: state.hoveredLotId === lot.id,
         isCalled: state.calledStudentId === studentId,
         jumpTimestamp:
           lastAward && lastAward.studentId === studentId
@@ -98,9 +94,6 @@ export function StudentLot({
   );
 
   if (!student) return null;
-
-  const showFullLabel = isSelected || isHovered || isCalled || isNearCamera;
-  const labelHeight = getProceduralShopHeight(student.level) + 2.55;
 
   return (
     <LotErrorBoundary lotId={lot.id}>
@@ -134,7 +127,7 @@ export function StudentLot({
           branch={student.shopBranch}
           color={student.shopColor}
           assets={assets}
-          castShadow={castShadow}
+          castShadow={castShadow && student.level >= 12}
         />
 
         <Avatar3D
@@ -146,39 +139,9 @@ export function StudentLot({
           lotRotationY={lot.rotationY}
           jumpTriggerTimestamp={jumpTimestamp}
           isCalled={isCalled}
+          showBlobShadow={isNearCamera || isSelected || isCalled}
           assets={assets}
         />
-
-        {/* Optimized HTML label: no backdrop-filter/blur, pointer-events:none (Rule 8.4) */}
-        <Html
-          position={[0, labelHeight, 0]}
-          center
-          distanceFactor={32}
-          zIndexRange={[10, 0]}
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {showFullLabel ? (
-            <div
-              className={
-                isSelected || isCalled
-                  ? 'flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-amber-300 bg-slate-900 px-2.5 py-1 text-xs font-bold text-white shadow-md'
-                  : 'flex items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-700 bg-slate-900/95 px-2 py-0.5 text-[11px] font-semibold text-slate-100'
-              }
-            >
-              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-extrabold text-white">
-                {student.studentCode}
-              </span>
-              <span>{student.name}</span>
-              <span className="rounded bg-amber-500/20 px-1 text-[10px] font-bold text-amber-300">
-                Lv.{student.level}
-              </span>
-            </div>
-          ) : (
-            <div className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-700 bg-slate-900 px-1.5 text-[10px] font-bold text-slate-200">
-              {student.studentCode}
-            </div>
-          )}
-        </Html>
       </group>
     </LotErrorBoundary>
   );

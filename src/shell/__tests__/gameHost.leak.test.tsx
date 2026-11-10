@@ -16,6 +16,7 @@ import { DEFAULT_SESSION_USER } from '../../platform/ports/auth';
 import { createTelemetry } from '../../platform/ports/telemetry';
 import type { GameContext } from '../../platform/types/manifest';
 import { disposeObject3D } from '../../three-kit/Disposer';
+import { mergeColoredGeometries } from '../../three-kit/mergeColoredGeometries';
 import { findGameManifest, gameRegistry, upcomingGames } from '../gameRegistry';
 import { Shell } from '../Shell';
 
@@ -203,5 +204,27 @@ describe('GĐ7 Hub, GameHost Manifest Contract & Resource Leak Gate', () => {
 
     ctx.assets.dispose();
     ctx.bus.dispose();
+  });
+
+  it('merges multi-part colored primitives into a single vertex-colored BufferGeometry for 1-draw-call shops and avatars', () => {
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const cone = new THREE.ConeGeometry(0.5, 1, 8);
+    const merged = mergeColoredGeometries([
+      { geometry: box, color: '#FF9AA2', position: [0, 0.5, 0] },
+      { geometry: cone, color: '#0D9488', position: [0, 1.5, 0] },
+    ]);
+
+    const pos = merged.getAttribute('position');
+    const norm = merged.getAttribute('normal');
+    const col = merged.getAttribute('color');
+
+    expect(pos.count).toBeGreaterThan(36);
+    expect(norm.count).toBe(pos.count);
+    expect(col.count).toBe(pos.count);
+    expect(merged.boundingSphere).not.toBeNull();
+
+    merged.dispose();
+    box.dispose();
+    cone.dispose();
   });
 });

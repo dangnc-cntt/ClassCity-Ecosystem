@@ -57,12 +57,16 @@ export const classcityManifest: GameManifest = {
             renderCurrent();
           },
           async unmount(): Promise<void> {
-            root.unmount();
             useClassStore.setState({
               activeModal: 'none',
               activeAutoPlan: null,
               vehicleState: 'idle',
             });
+            // Defer nested root unmount outside the host React commit phase so R3F <Html> sub-roots unmount cleanly
+            await new Promise<void>((resolve) => {
+              setTimeout(resolve, 0);
+            });
+            root.unmount();
           },
         };
       },

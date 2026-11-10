@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useShallow } from 'zustand/react/shallow';
+import { mergeColoredGeometries } from '../../../../three-kit/mergeColoredGeometries';
 import { useClassStore } from '../../state/useClassStore';
 
 const GIFT_GEOM = {
@@ -13,11 +14,29 @@ const GIFT_GEOM = {
   sparkle: new THREE.OctahedronGeometry(0.18, 0),
 };
 
+const MERGED_GIFT_BOX_GEOM = mergeColoredGeometries([
+  { geometry: GIFT_GEOM.cube, color: '#EC4899' },
+  { geometry: GIFT_GEOM.ribbonH, color: '#FDE047' },
+  { geometry: GIFT_GEOM.ribbonV, color: '#FDE047' },
+  {
+    geometry: GIFT_GEOM.bowLoop,
+    color: '#FDE047',
+    position: [-0.14, 0.62, 0],
+    rotation: [0, 0, 0.45],
+  },
+  {
+    geometry: GIFT_GEOM.bowLoop,
+    color: '#FDE047',
+    position: [0.14, 0.62, 0],
+    rotation: [0, 0, -0.45],
+  },
+]);
+
 const GIFT_MAT = {
-  boxBody: new THREE.MeshStandardMaterial({
-    color: '#EC4899',
+  mergedBox: new THREE.MeshStandardMaterial({
+    vertexColors: true,
     roughness: 0.35,
-    metalness: 0.15,
+    metalness: 0.2,
   }),
   goldRibbon: new THREE.MeshStandardMaterial({
     color: '#FDE047',
@@ -59,21 +78,7 @@ function SingleGiftBox({ position, index }: SingleGiftBoxProps) {
         rotation={[-Math.PI / 2, 0, 0]}
       />
       <group ref={meshGroupRef} position={[0, 0.85, 0]}>
-        <mesh geometry={GIFT_GEOM.cube} material={GIFT_MAT.boxBody} />
-        <mesh geometry={GIFT_GEOM.ribbonH} material={GIFT_MAT.goldRibbon} />
-        <mesh geometry={GIFT_GEOM.ribbonV} material={GIFT_MAT.goldRibbon} />
-        <mesh
-          geometry={GIFT_GEOM.bowLoop}
-          material={GIFT_MAT.goldRibbon}
-          position={[-0.14, 0.62, 0]}
-          rotation={[0, 0, 0.45]}
-        />
-        <mesh
-          geometry={GIFT_GEOM.bowLoop}
-          material={GIFT_MAT.goldRibbon}
-          position={[0.14, 0.62, 0]}
-          rotation={[0, 0, -0.45]}
-        />
+        <mesh geometry={MERGED_GIFT_BOX_GEOM} material={GIFT_MAT.mergedBox} />
       </group>
     </group>
   );
