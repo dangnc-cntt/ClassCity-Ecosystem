@@ -169,7 +169,7 @@ Hiện tại dự án tự động dựng hình 3D thủ tục (`ShopProcedural`
 - **Nhân vật dùng chung toàn hệ sinh thái (`public/shared-assets/models/`):**
   - `avatar_knight.glb`, `avatar_mage.glb`, `avatar_astronaut.glb`, `avatar_dino.glb`, `avatar_cat.glb`
 - **Tài sản riêng của ClassCity (`public/games/classcity/models/`):**
-  - Cửa hàng 20 cấp: `shop_lv01.glb` → `shop_lv20.glb` (khai báo chi tiết tại `src/games/classcity/config/assetsRegistry.ts`)
+  - Cửa hàng 20 cấp: `shop_level_1.glb` → `shop_level_20.glb` (xem đặc tả chi tiết từng cấp & prompt tạo 3D tại [`docs/04-3d-building-specs.md`](docs/04-3d-building-specs.md))
   - Biểu tượng nóc ngành hàng: `topper_bakery.glb`, `topper_cafe.glb`, `topper_bookstore.glb`, `topper_petshop.glb`, `topper_gamecenter.glb`
   - Phương tiện tuần tra: `vehicle_car.glb`, `vehicle_ambulance.glb`, `vehicle_ufo.glb`
 
