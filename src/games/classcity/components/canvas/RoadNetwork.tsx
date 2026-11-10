@@ -35,6 +35,15 @@ const SIDEWALK_INNER = CENTER_ROAD_X + ROAD_WIDTH / 2 + 1;
 const SIDEWALK_OUTER = 46;
 const SIDEWALK_LEN = SIDEWALK_OUTER - SIDEWALK_INNER;
 
+const PUFF_GEOM = new THREE.IcosahedronGeometry(1, 1);
+
+const LAYERED_CANOPY_GEOM = mergeColoredGeometries([
+  { geometry: PUFF_GEOM, color: '#15803D', position: [0, 0.1, 0], scale: [1.05, 0.92, 1.05] },
+  { geometry: PUFF_GEOM, color: '#22C55E', position: [0.42, -0.1, 0.25], scale: [0.76, 0.68, 0.76] },
+  { geometry: PUFF_GEOM, color: '#16A34A', position: [-0.4, -0.14, -0.22], scale: [0.78, 0.7, 0.78] },
+  { geometry: PUFF_GEOM, color: '#4ADE80', position: [0.08, 0.58, -0.05], scale: [0.68, 0.6, 0.68] },
+]);
+
 // Shared geometries & materials for RoadNetwork & Instanced props (Rule 8.2 & 8.3)
 const ENV_GEOM = {
   ground: new THREE.PlaneGeometry(GROUND_WIDTH, GROUND_DEPTH),
@@ -42,8 +51,8 @@ const ENV_GEOM = {
   disc: new THREE.CylinderGeometry(1, 1, 1, 32),
   emptyParkGrass: new THREE.BoxGeometry(LOT_SIZE - 0.4, 0.18, LOT_SIZE - 0.4),
   dashMark: new THREE.BoxGeometry(1.8, 0.02, 0.22),
-  treeTrunk: new THREE.CylinderGeometry(0.18, 0.26, 1.3, 8),
-  treeCrown: new THREE.ConeGeometry(1.1, 2.6, 8),
+  treeTrunk: new THREE.CylinderGeometry(0.18, 0.28, 1.4, 8),
+  treeCrown: LAYERED_CANOPY_GEOM,
   lampPole: new THREE.CylinderGeometry(0.08, 0.11, 3.6, 8),
   lampBulb: new THREE.SphereGeometry(0.24, 10, 10),
 };
@@ -52,7 +61,11 @@ const ENV_MAT = {
   parkGrass: new THREE.MeshStandardMaterial({ color: '#22C55E', roughness: 0.85 }),
   dashWhite: new THREE.MeshBasicMaterial({ color: '#F8FAFC' }),
   treeTrunk: new THREE.MeshStandardMaterial({ color: '#78350F', roughness: 0.85 }),
-  treeCrown: new THREE.MeshStandardMaterial({ color: '#15803D', roughness: 0.65 }),
+  treeCrown: new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.68,
+    flatShading: true,
+  }),
   lampPole: new THREE.MeshStandardMaterial({
     color: '#475569',
     metalness: 0.5,
@@ -161,20 +174,84 @@ function buildStaticBaseGeometry(): THREE.BufferGeometry {
     }
   );
 
-  // Two ponds with lighter rims
+  // Two ponds feeding streams straight to the island's twin front waterfalls + wooden footbridges
   for (const pondX of [-33, 33]) {
     parts.push(
       {
         geometry: ENV_GEOM.disc,
-        color: '#BAE6FD',
-        position: [pondX, 0.13, WONDER_CENTER[2] + 1],
-        scale: [7.6, 0.06, 5.6],
+        color: '#94A3B8',
+        position: [pondX, 0.125, WONDER_CENTER[2] + 1],
+        scale: [8.1, 0.05, 6.1],
       },
       {
         geometry: ENV_GEOM.disc,
-        color: '#38BDF8',
-        position: [pondX, 0.17, WONDER_CENTER[2] + 1],
-        scale: [6.6, 0.06, 4.6],
+        color: '#BAE6FD',
+        position: [pondX, 0.145, WONDER_CENTER[2] + 1],
+        scale: [7.4, 0.06, 5.4],
+      },
+      {
+        geometry: ENV_GEOM.disc,
+        color: '#0EA5E9',
+        position: [pondX, 0.175, WONDER_CENTER[2] + 1],
+        scale: [6.4, 0.06, 4.4],
+      },
+      // Outflow creek connecting the pond to the front cliff waterfall at z = +50
+      {
+        geometry: ENV_GEOM.box,
+        color: '#BAE6FD',
+        position: [pondX, 0.135, 42.5],
+        scale: [5.6, 0.06, 15.2],
+      },
+      {
+        geometry: ENV_GEOM.box,
+        color: '#0EA5E9',
+        position: [pondX, 0.165, 42.5],
+        scale: [4.6, 0.06, 15.2],
+      },
+      // Arched-feel wooden footbridge across the stream
+      {
+        geometry: ENV_GEOM.box,
+        color: '#92400E',
+        position: [pondX, 0.34, 41.5],
+        scale: [6.4, 0.24, 2.2],
+      },
+      {
+        geometry: ENV_GEOM.box,
+        color: '#B45309',
+        position: [pondX, 0.62, 40.5],
+        scale: [6.4, 0.18, 0.18],
+      },
+      {
+        geometry: ENV_GEOM.box,
+        color: '#B45309',
+        position: [pondX, 0.62, 42.5],
+        scale: [6.4, 0.18, 0.18],
+      }
+    );
+  }
+
+  // Park benches facing the Class Wonder plaza
+  const benchOffsets: Array<[number, number, number]> = [
+    [-11.5, WONDER_CENTER[2] - 4.2, Math.PI / 4],
+    [11.5, WONDER_CENTER[2] - 4.2, -Math.PI / 4],
+    [-11.5, WONDER_CENTER[2] + 4.2, (Math.PI * 3) / 4],
+    [11.5, WONDER_CENTER[2] + 4.2, -(Math.PI * 3) / 4],
+  ];
+  for (const [bx, bz, ry] of benchOffsets) {
+    parts.push(
+      {
+        geometry: ENV_GEOM.box,
+        color: '#B45309',
+        position: [bx, 0.42, bz],
+        rotation: [0, ry, 0],
+        scale: [2.4, 0.16, 0.72],
+      },
+      {
+        geometry: ENV_GEOM.box,
+        color: '#78350F',
+        position: [bx, 0.68, bz],
+        rotation: [0, ry, 0],
+        scale: [2.4, 0.36, 0.16],
       }
     );
   }
@@ -192,14 +269,17 @@ interface PropTransform {
 }
 
 function isFreeParkSpot(x: number, z: number): boolean {
-  // Keep trees off the paths, the Wonder plaza and both ponds
-  if (Math.abs(x) < 3) return false;
-  if (Math.abs(z - WONDER_CENTER[2]) < 3) return false;
-  if (Math.hypot(x - WONDER_CENTER[0], z - WONDER_CENTER[2]) < WONDER_RADIUS + 3.5) {
+  // Keep trees off the paths, benches, Wonder plaza, ponds and outflow streams
+  if (Math.abs(x) < 3.4) return false;
+  if (Math.abs(z - WONDER_CENTER[2]) < 3.4) return false;
+  if (Math.hypot(x - WONDER_CENTER[0], z - WONDER_CENTER[2]) < WONDER_RADIUS + 4.8) {
     return false;
   }
   for (const pondX of [-33, 33]) {
     if (Math.hypot((x - pondX) / 9, (z - (WONDER_CENTER[2] + 1)) / 7) < 1) {
+      return false;
+    }
+    if (z >= WONDER_CENTER[2] + 1 && Math.abs(x - pondX) < 5.2) {
       return false;
     }
   }
@@ -234,13 +314,27 @@ export function RoadNetwork({ emptyLots = [] }: RoadNetworkProps) {
         }
       }
     }
-    // Back tree line behind the first shop row and side belts outside the boulevards
-    for (let x = -58; x <= 58; x += 7.5) {
-      trees.push({ position: [x, 0, -46], scale: 1.15 });
+    // Staggered back & side greenery belts outside the roads (avoids rigid picket-row look)
+    let edgeIdx = 0;
+    for (let x = -57; x <= 57; x += 8.2) {
+      edgeIdx += 1;
+      const offset = ((edgeIdx * 29) % 5) - 2;
+      trees.push({
+        position: [x, 0, -45.5 + offset * 0.65],
+        scale: 0.95 + (edgeIdx % 3) * 0.16,
+      });
     }
-    for (let z = -38; z <= 12; z += 8.5) {
-      trees.push({ position: [-59.5, 0, z], scale: 1.05 });
-      trees.push({ position: [59.5, 0, z], scale: 1.05 });
+    for (let z = -37; z <= 13; z += 9) {
+      edgeIdx += 1;
+      const ox = ((edgeIdx * 17) % 3) - 1;
+      trees.push({
+        position: [-59 + ox * 0.7, 0, z],
+        scale: 0.9 + (edgeIdx % 4) * 0.12,
+      });
+      trees.push({
+        position: [59 - ox * 0.7, 0, z],
+        scale: 0.9 + ((edgeIdx + 1) % 4) * 0.12,
+      });
     }
     // Trees on empty lots (e.g. slots 37-40 when class has 36 students)
     for (const emptyLot of emptyLots) {
@@ -362,7 +456,8 @@ export function RoadNetwork({ emptyLots = [] }: RoadNetworkProps) {
           return (
             <Instance
               key={`crown-${i}`}
-              position={[t.position[0], 2.1 * s, t.position[2]]}
+              position={[t.position[0], 1.85 * s, t.position[2]]}
+              rotation={[0, (i * 1.37) % (Math.PI * 2), 0]}
               scale={[s, s, s]}
             />
           );

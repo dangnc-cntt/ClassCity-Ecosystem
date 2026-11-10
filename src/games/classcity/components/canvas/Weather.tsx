@@ -23,8 +23,24 @@ const RAINBOW_BANDS = RAINBOW_COLORS.map((hex, i) => ({
   }),
 }));
 
-const SUN_GEOM = new THREE.SphereGeometry(4.2, 20, 20);
-const SUN_MAT = new THREE.MeshBasicMaterial({ color: '#FDE047' });
+const SUN_GEOM = new THREE.SphereGeometry(4.4, 24, 24);
+const SUN_HALO_INNER = new THREE.SphereGeometry(6.2, 24, 24);
+const SUN_HALO_OUTER = new THREE.SphereGeometry(9.2, 24, 24);
+const SUN_MAT = new THREE.MeshBasicMaterial({ color: '#FEF08A', fog: false });
+const SUN_HALO_INNER_MAT = new THREE.MeshBasicMaterial({
+  color: '#FDE047',
+  transparent: true,
+  opacity: 0.26,
+  depthWrite: false,
+  fog: false,
+});
+const SUN_HALO_OUTER_MAT = new THREE.MeshBasicMaterial({
+  color: '#F59E0B',
+  transparent: true,
+  opacity: 0.11,
+  depthWrite: false,
+  fog: false,
+});
 
 const RAIN_COUNT_HIGH = 750;
 const RAIN_COUNT_LOW = 280;
@@ -94,13 +110,13 @@ export function Weather({ mode, lowPowerMode = false }: WeatherProps) {
 
   return (
     <group name="Weather">
-      {/* Warm Sun in Sunny & Rainbow modes */}
+      {/* Luminous Cosmic Sun / Moon with layered glow halos */}
       {mode !== 'rainy' && (
-        <mesh
-          geometry={SUN_GEOM}
-          material={SUN_MAT}
-          position={[42, 48, -48]}
-        />
+        <group position={[48, 52, -58]}>
+          <mesh geometry={SUN_GEOM} material={SUN_MAT} />
+          <mesh geometry={SUN_HALO_INNER} material={SUN_HALO_INNER_MAT} />
+          <mesh geometry={SUN_HALO_OUTER} material={SUN_HALO_OUTER_MAT} />
+        </group>
       )}
 
       {/* 3D Rainbow Arch in Rainbow mode */}

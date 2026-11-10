@@ -33,7 +33,7 @@ export interface TopToolbarProps {
 
 /**
  * Top HUD toolbar over the 3D city canvas (Rule 9, `docs/design-plan.md`).
- * Opaque high-contrast surface (`--surface`), zero `backdrop-filter`, full keyboard & ARIA labels.
+ * Opaque high-contrast surface (`--surface`), zero `backdrop-filter`, clean single-row balance.
  */
 export function TopToolbar({
   useCases,
@@ -93,20 +93,22 @@ export function TopToolbar({
   };
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-20 flex flex-wrap items-center justify-between gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      {/* Left + Center Cluster: Hub, Classroom Selector, Wonder Progress, Auto-Drive */}
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-700 bg-[var(--surface)] px-3.5 py-2.5 shadow-lg">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-20 flex flex-wrap items-center justify-between gap-2 p-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
+      {/* Left Cluster: Hub, Brand & Classroom, Wonder Pill, Primary Auto-Drive CTA */}
+      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl border border-slate-700/90 bg-[var(--surface)] px-2.5 py-2 shadow-xl">
         <button
           type="button"
           onClick={() => useCases?.navigateToHub()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-[var(--surface-elevated)] px-3 py-2 text-base font-semibold text-[var(--ink-primary)] transition-colors duration-150 hover:border-slate-500 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+          aria-label={t('toolbar.backToHub')}
+          title={t('toolbar.backToHub')}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-elevated)] px-2.5 py-1.5 text-sm font-bold text-[var(--ink-primary)] transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
         >
-          <ArrowLeft className="size-4 shrink-0" aria-hidden="true" />
-          <span>{t('toolbar.backToHub')}</span>
+          <ArrowLeft className="size-4 shrink-0 text-teal-300" aria-hidden="true" />
+          <span className="hidden sm:inline">{t('toolbar.backToHub')}</span>
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="hidden text-xl font-extrabold text-[var(--ink-primary)] xl:inline">
+          <span className="hidden text-lg font-extrabold text-[var(--ink-primary)] xl:inline">
             {brandName}
           </span>
           <div className="relative flex items-center">
@@ -119,7 +121,7 @@ export function TopToolbar({
               onChange={(e) => {
                 void useCases?.switchClassroom(e.target.value);
               }}
-              className="rounded-xl border border-slate-600 bg-[var(--surface-elevated)] py-2 pr-8 pl-3 text-base font-bold text-[var(--ink-primary)] tabular-nums transition-colors duration-150 hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+              className="rounded-xl bg-[var(--surface-elevated)] py-1.5 pr-7 pl-2.5 text-sm font-bold text-[var(--ink-primary)] tabular-nums transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
             >
               {classrooms.map((cls) => {
                 const isLocked =
@@ -134,25 +136,23 @@ export function TopToolbar({
             </select>
             {!canMultiClass && classrooms.length > 1 && (
               <Lock
-                className="pointer-events-none absolute right-2.5 size-4 text-amber-400"
+                className="pointer-events-none absolute right-2 size-3.5 text-amber-400"
                 aria-hidden="true"
               />
             )}
           </div>
         </div>
 
-        <div className="hidden h-7 w-px bg-slate-700 md:block" aria-hidden="true" />
+        <div className="hidden h-6 w-px bg-slate-700 md:block" aria-hidden="true" />
 
-        {/* Class Wonder Progress */}
-        <div className="flex flex-col justify-center px-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-base font-bold text-amber-300 tabular-nums">
-              {t('city.wonderProgress', {
-                percent: wonderInfo.percent,
-                stage: wonderInfo.stage,
-              })}
-            </span>
-          </div>
+        {/* Compact Class Wonder Progress Pill */}
+        <div className="flex flex-col justify-center rounded-xl bg-[var(--surface-elevated)] px-2.5 py-1">
+          <span className="text-xs font-extrabold text-amber-300 tabular-nums">
+            {t('city.wonderProgress', {
+              percent: wonderInfo.percent,
+              stage: wonderInfo.stage,
+            })}
+          </span>
           <div
             role="progressbar"
             aria-valuemin={0}
@@ -161,7 +161,7 @@ export function TopToolbar({
             aria-label={t('city.wonderAriaLabel', {
               percent: wonderInfo.percent,
             })}
-            className="mt-1 h-2.5 w-40 overflow-hidden rounded-full bg-slate-800"
+            className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-slate-900"
           >
             <div
               className="h-full w-full origin-left bg-[var(--brand-accent)] transition-transform duration-200 ease-out"
@@ -170,16 +170,14 @@ export function TopToolbar({
           </div>
         </div>
 
-        <div className="hidden h-7 w-px bg-slate-700 sm:block" aria-hidden="true" />
-
         {/* Primary Classroom Action: Auto-Drive Callout */}
         <button
           type="button"
           disabled={isAutoDriving || studentsCount === 0}
           onClick={() => useCases?.startAutoDrive()}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-4 py-2 text-base font-extrabold text-slate-950 shadow-sm transition-transform duration-150 hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-accent)] px-3.5 py-2 text-sm font-extrabold text-slate-950 shadow-sm transition-transform duration-150 hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
         >
-          <Shuffle className="size-5 shrink-0" aria-hidden="true" />
+          <Shuffle className="size-4 shrink-0" aria-hidden="true" />
           <span>
             {isAutoDriving ? t('toolbar.autoDriving') : t('toolbar.autoDrive')}
           </span>
@@ -190,7 +188,7 @@ export function TopToolbar({
           <button
             type="button"
             onClick={() => void useCases?.callStudentByLot(nearestManualLotId)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3.5 py-2 text-base font-bold text-white shadow-sm transition-transform duration-150 hover:brightness-110 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-300"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-sm font-bold text-white shadow-sm transition-transform duration-150 hover:brightness-110 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-300"
           >
             <Megaphone className="size-4 shrink-0" aria-hidden="true" />
             <span className="tabular-nums">
@@ -200,13 +198,13 @@ export function TopToolbar({
         )}
       </div>
 
-      {/* Right Cluster: Vehicle, Weather, Mute, Modals */}
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl border border-slate-700 bg-[var(--surface)] px-3 py-2 shadow-lg">
+      {/* Right Cluster: Segmented Vehicle/Weather Controls + Clean Utility Buttons */}
+      <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-700/90 bg-[var(--surface)] px-2.5 py-1.5 shadow-xl">
         {/* Vehicle Kind Switcher */}
         <div
           role="group"
           aria-label={t('toolbar.vehicleGroup')}
-          className="flex items-center gap-1 rounded-xl bg-[var(--surface-elevated)] p-1"
+          className="flex items-center gap-0.5 rounded-xl bg-[var(--surface-elevated)] p-1"
         >
           {(
             [
@@ -225,9 +223,9 @@ export function TopToolbar({
                 title={t(`city.vehicle.${kind}`)}
                 onClick={() => void useCases?.setVehicleKind(kind)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-bold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400',
+                  'inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-bold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400',
                   active
-                    ? 'bg-[var(--brand-primary)] text-white'
+                    ? 'bg-[var(--brand-primary)] text-white shadow-sm'
                     : 'text-[var(--ink-muted)] hover:bg-slate-700 hover:text-white'
                 )}
               >
@@ -244,7 +242,7 @@ export function TopToolbar({
         <div
           role="group"
           aria-label={t('toolbar.weatherGroup')}
-          className="flex items-center gap-1 rounded-xl bg-[var(--surface-elevated)] p-1"
+          className="flex items-center gap-0.5 rounded-xl bg-[var(--surface-elevated)] p-1"
         >
           {(
             [
@@ -263,9 +261,9 @@ export function TopToolbar({
                 title={t(`city.weather.${mode}`)}
                 onClick={() => void useCases?.setWeatherMode(mode)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-bold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400',
+                  'inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-bold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400',
                   active
-                    ? 'bg-sky-600 text-white'
+                    ? 'bg-sky-600 text-white shadow-sm'
                     : 'text-[var(--ink-muted)] hover:bg-slate-700 hover:text-white'
                 )}
               >
@@ -278,6 +276,8 @@ export function TopToolbar({
           })}
         </div>
 
+        <div className="hidden h-6 w-px bg-slate-700 sm:block" aria-hidden="true" />
+
         {/* Mute Toggle */}
         <button
           type="button"
@@ -286,16 +286,16 @@ export function TopToolbar({
           title={muted ? t('toolbar.muteOn') : t('toolbar.muteOff')}
           onClick={handleToggleMute}
           className={cn(
-            'inline-flex size-10 items-center justify-center rounded-xl border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400',
+            'inline-flex size-9 items-center justify-center rounded-xl transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400',
             muted
-              ? 'border-rose-500/60 bg-rose-950/60 text-rose-300 hover:bg-rose-900/60'
-              : 'border-slate-700 bg-[var(--surface-elevated)] text-[var(--ink-primary)] hover:bg-slate-700'
+              ? 'bg-rose-950 text-rose-300 hover:bg-rose-900'
+              : 'bg-[var(--surface-elevated)] text-[var(--ink-primary)] hover:bg-slate-700'
           )}
         >
           {muted ? (
-            <VolumeX className="size-5" aria-hidden="true" />
+            <VolumeX className="size-4" aria-hidden="true" />
           ) : (
-            <Volume2 className="size-5" aria-hidden="true" />
+            <Volume2 className="size-4" aria-hidden="true" />
           )}
         </button>
 
@@ -305,10 +305,10 @@ export function TopToolbar({
           onClick={() => setActiveModal('leaderboard')}
           aria-label={t('toolbar.leaderboard')}
           title={t('toolbar.leaderboard')}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-[var(--surface-elevated)] px-3 py-2 text-base font-semibold text-[var(--ink-primary)] transition-colors duration-150 hover:border-amber-400/60 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-elevated)] px-2.5 py-2 text-sm font-bold text-[var(--ink-primary)] transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
         >
           <Trophy className="size-4 shrink-0 text-amber-400" aria-hidden="true" />
-          <span className="hidden lg:inline">{t('toolbar.leaderboard')}</span>
+          <span className="hidden 2xl:inline">{t('toolbar.leaderboard')}</span>
         </button>
 
         {/* Import / Export */}
@@ -317,10 +317,10 @@ export function TopToolbar({
           onClick={() => setActiveModal('import_export')}
           aria-label={t('toolbar.importExport')}
           title={t('toolbar.importExport')}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-[var(--surface-elevated)] px-3 py-2 text-base font-semibold text-[var(--ink-primary)] transition-colors duration-150 hover:border-slate-500 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-elevated)] px-2.5 py-2 text-sm font-bold text-[var(--ink-primary)] transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
         >
           <FolderSync className="size-4 shrink-0 text-teal-300" aria-hidden="true" />
-          <span className="hidden xl:inline">{t('toolbar.importExport')}</span>
+          <span className="hidden 2xl:inline">{t('toolbar.importExport')}</span>
         </button>
 
         {/* Ecosystem Bridge */}
@@ -329,10 +329,10 @@ export function TopToolbar({
           onClick={() => setActiveModal('ecosystem')}
           aria-label={t('toolbar.ecosystem')}
           title={t('toolbar.ecosystem')}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-[var(--surface-elevated)] px-3 py-2 text-base font-semibold text-[var(--ink-primary)] transition-colors duration-150 hover:border-sky-400/60 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-elevated)] px-2.5 py-2 text-sm font-bold text-[var(--ink-primary)] transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
         >
           <Network className="size-4 shrink-0 text-sky-300" aria-hidden="true" />
-          <span className="hidden xl:inline">{t('toolbar.ecosystem')}</span>
+          <span className="hidden 2xl:inline">{t('toolbar.ecosystem')}</span>
         </button>
 
         {/* Settings */}
@@ -341,9 +341,9 @@ export function TopToolbar({
           onClick={() => setActiveModal('settings')}
           aria-label={t('toolbar.settings')}
           title={t('toolbar.settings')}
-          className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-700 bg-[var(--surface-elevated)] text-[var(--ink-primary)] transition-colors duration-150 hover:border-slate-500 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+          className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--surface-elevated)] text-[var(--ink-primary)] transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
         >
-          <Settings className="size-5" aria-hidden="true" />
+          <Settings className="size-4" aria-hidden="true" />
         </button>
       </div>
     </header>

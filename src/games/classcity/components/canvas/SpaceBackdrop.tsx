@@ -18,7 +18,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-const STAR_COUNT = 1800;
+const STAR_COUNT = 2200;
 const STAR_TINTS = ['#FFFFFF', '#E0F2FE', '#FEF3C7', '#DDD6FE', '#FBCFE8'];
 
 function buildStarGeometry(): THREE.BufferGeometry {
@@ -27,16 +27,35 @@ function buildStarGeometry(): THREE.BufferGeometry {
   const colors = new Float32Array(STAR_COUNT * 3);
   const c = new THREE.Color();
   for (let i = 0; i < STAR_COUNT; i += 1) {
-    // Uniform direction on a sphere, radius between 420 and 560
-    const u = rng() * 2 - 1;
-    const phi = rng() * Math.PI * 2;
-    const r = 420 + rng() * 140;
-    const s = Math.sqrt(1 - u * u);
-    positions[i * 3] = Math.cos(phi) * s * r;
-    positions[i * 3 + 1] = u * r;
-    positions[i * 3 + 2] = Math.sin(phi) * s * r;
+    // 70% uniform sky sphere, 30% concentrated into a diagonal Milky Way band
+    let px = 0;
+    let py = 0;
+    let pz = 0;
+    const r = 410 + rng() * 160;
+    if (i < STAR_COUNT * 0.7) {
+      const u = rng() * 2 - 1;
+      const phi = rng() * Math.PI * 2;
+      const s = Math.sqrt(1 - u * u);
+      px = Math.cos(phi) * s * r;
+      py = u * r;
+      pz = Math.sin(phi) * s * r;
+    } else {
+      const phi = rng() * Math.PI * 2;
+      const spread = (rng() - 0.5) * 0.34;
+      const cosA = Math.cos(spread);
+      const bx = Math.cos(phi) * cosA * r;
+      const by = Math.sin(spread) * r;
+      const bz = Math.sin(phi) * cosA * r;
+      // Tilt band 28 degrees
+      px = bx;
+      py = by * 0.88 - bz * 0.47;
+      pz = by * 0.47 + bz * 0.88;
+    }
+    positions[i * 3] = px;
+    positions[i * 3 + 1] = py;
+    positions[i * 3 + 2] = pz;
     c.set(STAR_TINTS[Math.floor(rng() * STAR_TINTS.length)]!);
-    const dim = 0.45 + rng() * 0.55;
+    const dim = 0.55 + rng() * 0.45;
     colors[i * 3] = c.r * dim;
     colors[i * 3 + 1] = c.g * dim;
     colors[i * 3 + 2] = c.b * dim;
@@ -130,13 +149,13 @@ function buildAvatarCarouselGeometry(
         geometry: getAvatarGeometry(id),
         position: [x, bob, z],
         rotation: [0, yaw, 0],
-        scale: [3.6, 3.6, 3.6],
+        scale: [4.5, 4.5, 4.5],
       },
       {
         geometry: disc,
-        color: '#38BDF8',
-        position: [x, bob - 0.2, z],
-        scale: [3.6, 3.6, 3.6],
+        color: '#22D3EE',
+        position: [x, bob - 0.25, z],
+        scale: [4.6, 4.6, 4.6],
       }
     );
   });

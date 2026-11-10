@@ -178,7 +178,7 @@ export function LotLabelsOverlay({ cameraRef }: LotLabelsOverlayProps) {
                 else compactBadgeRefs.current.delete(student.id);
               }}
               style={{ display: isHighlighted ? 'none' : 'inline-flex' }}
-              className="h-5 min-w-5 items-center justify-center rounded-full border border-slate-700 bg-slate-900 px-1.5 text-[10px] font-bold text-slate-200 tabular-nums"
+              className="h-5 min-w-5 items-center justify-center rounded-full border border-teal-400/50 bg-slate-900/90 px-1.5 text-[11px] font-extrabold text-teal-200 shadow-sm tabular-nums"
             >
               {student.studentCode}
             </div>
