@@ -1,4 +1,4 @@
-# ClassCity Ecosystem — ClassCity 3D
+# ClassCity Edu Ecosystem — ClassCity 3D
 
 Hệ sinh thái trò chơi giáo dục quản lý lớp học thông minh định hướng SaaS đa trò chơi, khởi đầu với **ClassCity 3D** — nơi mỗi học sinh làm chủ một cửa hàng 3D phát triển qua **20 cấp độ kiến trúc**, có nhân vật đại diện đi dạo trên vỉa hè, xe tuần tra **Auto Lái Gọi Tên** trả bài, hộp quà đặc quyền và **Kỳ Quan Lớp Học** chung của tập thể.
 
