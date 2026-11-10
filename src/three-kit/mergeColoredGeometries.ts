@@ -2,7 +2,8 @@ import * as THREE from 'three';
 
 export interface ColoredPartSpec {
   geometry: THREE.BufferGeometry;
-  color: string | THREE.Color;
+  /** Solid colour for the part; when omitted the geometry's own color attribute is preserved. */
+  color?: string | THREE.Color;
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number];
@@ -26,6 +27,8 @@ export function mergeColoredGeometries(
   const prepared: Array<{
     geom: THREE.BufferGeometry;
     vertexCount: number;
+    colors: Float32Array | null;
+    uvs: Float32Array | null;
     r: number;
     g: number;
     b: number;
@@ -59,11 +62,15 @@ export function mergeColoredGeometries(
 
     const posAttr = g.getAttribute('position');
     const vertexCount = posAttr.count;
-    _col.set(part.color);
+    _col.set(part.color ?? '#FFFFFF');
+    const colorAttr = part.color === undefined ? g.getAttribute('color') : undefined;
+    const uvAttr = g.getAttribute('uv');
 
     prepared.push({
       geom: g,
       vertexCount,
+      colors: colorAttr ? Float32Array.from({ length: vertexCount * 3 }, (_, k) => (colorAttr.array as ArrayLike<number>)[k] ?? 1) : null,
+      uvs: uvAttr ? Float32Array.from({ length: vertexCount * 2 }, (_, k) => (uvAttr.array as ArrayLike<number>)[k] ?? 0) : null,
       r: _col.r,
       g: _col.g,
       b: _col.b,
@@ -74,6 +81,7 @@ export function mergeColoredGeometries(
   const positions = new Float32Array(totalVertices * 3);
   const normals = new Float32Array(totalVertices * 3);
   const colors = new Float32Array(totalVertices * 3);
+  const uvs = new Float32Array(totalVertices * 2);
 
   let offset = 0;
   for (const item of prepared) {
@@ -90,9 +98,13 @@ export function mergeColoredGeometries(
       normals[idx + 1] = normAttr.getY(i);
       normals[idx + 2] = normAttr.getZ(i);
 
-      colors[idx] = item.r;
-      colors[idx + 1] = item.g;
-      colors[idx + 2] = item.b;
+      colors[idx] = item.colors ? item.colors[i * 3]! : item.r;
+      colors[idx + 1] = item.colors ? item.colors[i * 3 + 1]! : item.g;
+      colors[idx + 2] = item.colors ? item.colors[i * 3 + 2]! : item.b;
+      if (item.uvs) {
+        uvs[(offset + i) * 2] = item.uvs[i * 2]!;
+        uvs[(offset + i) * 2 + 1] = item.uvs[i * 2 + 1]!;
+      }
     }
 
     offset += item.vertexCount;
@@ -103,6 +115,7 @@ export function mergeColoredGeometries(
   merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   merged.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  merged.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   merged.computeBoundingSphere();
   return merged;
 }

@@ -195,6 +195,16 @@ function getMergedAvatarGeometry(kind: AvatarKind): THREE.BufferGeometry {
   return merged;
 }
 
+/** Shared merged geometry + material of an avatar archetype, e.g. for baking decorative crowds. */
+export function getAvatarGeometry(avatarId: string): THREE.BufferGeometry {
+  const raw = avatarId.replace(/^avatar_/, '');
+  const kind: AvatarKind =
+    raw === 'knight' || raw === 'mage' || raw === 'astronaut' || raw === 'dino'
+      ? raw
+      : 'cat';
+  return getMergedAvatarGeometry(kind);
+}
+
 export interface AvatarProceduralProps {
   avatarId: string;
 }

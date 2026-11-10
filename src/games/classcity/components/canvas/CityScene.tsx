@@ -17,6 +17,7 @@ import { useClassStore } from '../../state/useClassStore';
 import { CameraController } from './CameraController';
 import { ClassWonder } from './ClassWonder';
 import { FloatingIsland } from './FloatingIsland';
+import { SpaceBackdrop } from './SpaceBackdrop';
 import { GiftBoxes } from './GiftBoxes';
 import { PatrolVehicle } from './PatrolVehicle';
 import { RoadNetwork } from './RoadNetwork';
@@ -27,21 +28,21 @@ const NEAR_CAMERA_DIST_SQ = 38 * 38;
 
 const WEATHER_PRESETS = {
   sunny: {
-    sky: new THREE.Color('#E0F2FE'),
+    sky: new THREE.Color('#070B24'),
     hemiSky: new THREE.Color('#FFFBEB'),
     ambient: 0.78,
     hemi: 0.55,
     dir: 1.35,
   },
   rainbow: {
-    sky: new THREE.Color('#BAE6FD'),
+    sky: new THREE.Color('#1A1247'),
     hemiSky: new THREE.Color('#FFFBEB'),
     ambient: 0.78,
     hemi: 0.55,
     dir: 1.35,
   },
   rainy: {
-    sky: new THREE.Color('#334155'),
+    sky: new THREE.Color('#0B1220'),
     hemiSky: new THREE.Color('#94A3B8'),
     ambient: 0.55,
     hemi: 0.35,
@@ -181,9 +182,10 @@ export function CityScene({
 
   return (
     <>
-      <color ref={bgColorRef} attach="background" args={['#E0F2FE']} />
-      <fog ref={fogRef} attach="fog" args={['#E0F2FE', 130, 380]} />
+      <color ref={bgColorRef} attach="background" args={['#070B24']} />
+      <fog ref={fogRef} attach="fog" args={['#070B24', 170, 520]} />
 
+      <SpaceBackdrop reducedMotion={reducedMotion} />
       <FloatingIsland reducedMotion={reducedMotion} />
 
       {/* Soft warm bounce light from below so the island underside never reads as flat black */}

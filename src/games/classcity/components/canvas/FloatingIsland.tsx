@@ -132,7 +132,7 @@ function buildCloudParts(): ColoredPartSpec[] {
       const s = 4 + rng() * 5;
       parts.push({
         geometry: PRIM.cloud,
-        color: p % 2 === 0 ? '#FFFFFF' : '#E0F2FE',
+        color: p % 2 === 0 ? '#E9D5FF' : '#FBCFE8',
         position: [cx + (p - 1.5) * 4.5, cy + rng() * 2, cz + (rng() - 0.5) * 4],
         scale: [s * 1.5, s * 0.7, s],
       });
@@ -154,8 +154,8 @@ const ISLAND_MAT = new THREE.MeshStandardMaterial({
 const CLOUD_MAT = new THREE.MeshStandardMaterial({
   vertexColors: true,
   roughness: 1,
-  emissive: '#FFFFFF',
-  emissiveIntensity: 0.25,
+  emissive: '#C084FC',
+  emissiveIntensity: 0.45,
   flatShading: true,
 });
 

@@ -26,16 +26,6 @@ const RAINBOW_BANDS = RAINBOW_COLORS.map((hex, i) => ({
 const SUN_GEOM = new THREE.SphereGeometry(4.2, 20, 20);
 const SUN_MAT = new THREE.MeshBasicMaterial({ color: '#FDE047' });
 
-const CLOUD_PUFF_GEOM = new THREE.SphereGeometry(2.6, 12, 12);
-const CLOUD_SUNNY_MAT = new THREE.MeshStandardMaterial({
-  color: '#FFFFFF',
-  roughness: 0.9,
-});
-const CLOUD_RAINY_MAT = new THREE.MeshStandardMaterial({
-  color: '#475569',
-  roughness: 0.9,
-});
-
 const RAIN_COUNT_HIGH = 750;
 const RAIN_COUNT_LOW = 280;
 
@@ -101,7 +91,6 @@ export function Weather({ mode, lowPowerMode = false }: WeatherProps) {
     posAttr.needsUpdate = true;
   });
 
-  const cloudMat = mode === 'rainy' ? CLOUD_RAINY_MAT : CLOUD_SUNNY_MAT;
 
   return (
     <group name="Weather">
@@ -136,29 +125,6 @@ export function Weather({ mode, lowPowerMode = false }: WeatherProps) {
         />
       )}
 
-      {/* Decorative sky clouds */}
-      {[
-        [-32, 34, -36],
-        [24, 36, -32],
-        [-18, 35, 32],
-        [34, 33, 28],
-      ].map(([cx, cy, cz], idx) => (
-        <group key={`cloud-${idx}`} position={[cx!, cy!, cz!]}>
-          <mesh geometry={CLOUD_PUFF_GEOM} material={cloudMat} />
-          <mesh
-            geometry={CLOUD_PUFF_GEOM}
-            material={cloudMat}
-            position={[2.2, -0.4, 0.4]}
-            scale={[0.8, 0.8, 0.8]}
-          />
-          <mesh
-            geometry={CLOUD_PUFF_GEOM}
-            material={cloudMat}
-            position={[-2.1, -0.5, -0.3]}
-            scale={[0.75, 0.75, 0.75]}
-          />
-        </group>
-      ))}
     </group>
   );
 }
