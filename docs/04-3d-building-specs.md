@@ -254,7 +254,33 @@ Các ảnh concept độ phân giải `1024×1024` (nền trơn, góc 3/4 isomet
 
 ---
 
-## 7. Ghi chú mở rộng cho đợt kế tiếp
+## 7. Bộ Sưu tập Đa dạng Phong cách Kiến trúc (5 Ngành hàng & Văn hóa Thế giới)
+
+Để thành phố tránh cảm giác mọi căn nhà ở cùng một cấp đều giống hệt nhau (chỉ đổi màu sơn), bộ **7 concept kiến trúc hoàn toàn khác biệt về hình khối & văn hóa** dưới đây được thiết kế đồng bộ nền `#E8ECEF`, góc `3/4` isometric, hướng cửa `+Z` và chừa bệ tròn đỉnh mái cho `Anchor_Topper`:
+
+| Phong cách / Ngành hàng | Tệp ảnh tham chiếu | Hình khối đặc trưng | Gợi ý gán Cấp / Ngành hàng |
+|---|---|---|---|
+| **Nhà Cổ tích Mái Kem (`bakery`)** | [`style-bakery-storybook-cottage.jpg`](references/building-concepts/style-bakery-storybook-cottage.jpg) | Mái ngói cong võng hình chuông, viền kem gợn sóng, cửa vòm tròn Hobbit, bồn hoa cửa sổ & ống khói gạch | Tiệm bánh ngọt (`bakery`) / Cấp 4–10 |
+| **Trà thất Machiya Nhật (`cafe`)** | [`style-cafe-japanese-machiya.jpg`](references/building-concepts/style-cafe-japanese-machiya.jpg) | 2 tầng khung gỗ sẫm, mái ngói rêu uốn cong nhẹ, hiên gỗ *engawa* treo đèn lồng giấy, cửa *shoji* & *koshi* | Quán cà phê (`cafe`) / Cấp 5–13 |
+| **Tháp Thư viện Thiên văn (`bookstore`)** | [`style-bookstore-owl-observatory.jpg`](references/building-concepts/style-bookstore-owl-observatory.jpg) | **Thân tháp hình trụ tròn** phá cách, tường đá & vữa xanh dương, ban công ngắm sao hông phải, chóp nón xanh cô-ban | Hiệu sách (`bookstore`) / Cấp 10–16 |
+| **Nhà Kính Vườn Thảo mộc (`petshop`)** | [`style-petshop-botanical-greenhouse.jpg`](references/building-concepts/style-petshop-botanical-greenhouse.jpg) | Vòm kính nhà kính uốn cong khung xanh bạc hà + gỗ mật ong, chân tường gạch đỏ, ánh nắng ấm xuyên kính | Tiệm thú cưng (`petshop`) / Cấp 6–14 |
+| **Studio Arcade Vũ trụ (`gamecenter`)** | [`style-gamecenter-cosmic-arcade.jpg`](references/building-concepts/style-gamecenter-cosmic-arcade.jpg) | Khối kén bo tròn Retro-Futuristic trắng ngọc & tím indigo, cửa đôi viền cyan, kính cong lộ máy arcade & nóc radar | Trung tâm trò chơi (`gamecenter`) / Cấp 11–18 |
+| **Biệt thự Nắng Địa Trung Hải** | [`style-mediterranean-sun-villa.jpg`](references/building-concepts/style-mediterranean-sun-villa.jpg) | Kiến trúc giật cấp chữ L: hàng hiên 3 vòm tầng trệt, cầu thang đá ngoài trời, sân thượng pergola & cửa chớp xanh ngọc | Biến thể đa văn hóa / Cấp 8–15 |
+| **Lầu Bát giác Pha lê Đảo Bay** | [`style-crystal-sky-pavilion.jpg`](references/building-concepts/style-crystal-sky-pavilion.jpg) | Mặt bằng **bát giác 8 cạnh**, cột đá cẩm thạch + kính màu ngọc bích, sườn bay uốn lượn & mái 2 tầng đảo bay | Biến thể Kỳ quan / Cấp 15–20 |
+
+### 7.1 Lưu ý xử lý riêng khi đưa bộ phong cách mới vào Blender / Game
+1. **Xóa đĩa đế mỏng ở 2 mẫu trụ tròn / kén:** Hai ảnh [`style-bookstore-owl-observatory.jpg`](references/building-concepts/style-bookstore-owl-observatory.jpg) và [`style-gamecenter-cosmic-arcade.jpg`](references/building-concepts/style-gamecenter-cosmic-arcade.jpg) có kèm một đĩa đế mỏng sát mặt đất; khi AI dựng xong thành `.glb`, nên xóa đĩa tròn rộng ở đáy (giữ phần chân tường chạm `Y = 0`) để khớp sạch sẽ lên thảm cỏ vuông của `LotDecor`.
+2. **Bổ sung phong cách Bắc Âu Chữ A (`Nordic Alpine A-Frame`) bằng prompt nếu cần mẫu thứ 8:**
+   ```text
+   Cozy stylized 3D diorama building of a Nordic Alpine A-Frame timber lodge, isometric 3/4 view (front entrance bottom-left, side slope bottom-right), isolated on seamless #E8ECEF light gray backdrop, steep triangular cedar-beam & forest-green slate roof reaching near cobblestone plinth, warm glowing front glass gable, large protruding side dormer window and chunky stone chimney on right roof slope, flat circular wooden pedestal pad at top ridge apex (empty on top). No terrain slab, no fence, no trees, no people.
+   ```
+3. **Cách gắn nhiều loại nhà cùng tồn tại trong ClassCity 3D:**
+   - Hiện tại [`ShopModel.tsx`](../src/games/classcity/components/canvas/ShopModel.tsx) tải tự động theo cấp độ (`shop_level_1.glb` … `shop_level_20.glb` — tức 1 dáng nhà chính cho mỗi cấp). Bạn hoàn toàn có thể phân bổ các phong cách trên vào các cấp khác nhau (ví dụ: Cấp 5 = *Machiya Nhật*, Cấp 6 = *Bakery Cổ tích*, Cấp 8 = *Nhà Kính*, Cấp 11 = *Địa Trung Hải*, Cấp 13 = *Tháp Thư viện*, Cấp 16 = *Arcade Vũ trụ*, Cấp 18 = *Lầu Bát giác Pha lê*).
+   - Nếu sau này muốn **mỗi ngành hàng (`ShopBranch`: `bakery`, `cafe`, `bookstore`, `petshop`, `gamecenter`) dùng 1 bộ kiến trúc riêng ở cùng cấp độ**, chỉ cần quy ước tên file `shop_<branch>_t<1..5>.glb` (ví dụ `shop_cafe_t3.glb`, `shop_bookstore_t4.glb`) và báo agent nâng cấp [`ShopModel.tsx`](../src/games/classcity/components/canvas/ShopModel.tsx) ưu tiên tải theo ngành + tier trước khi fallback về `shop_level_${level}.glb`.
+
+---
+
+## 8. Ghi chú mở rộng cho đợt kế tiếp
 Khi bạn đã có bộ nhà (hoặc muốn gen tiếp các thành phần khác), hãy báo tôi để viết tiếp bản đặc tả chi tiết & bộ prompt chuẩn khớp toạ độ game cho:
 1. **Hệ thống Item Khuôn viên (`public/shared-assets/models/prop_*.glb`):** Tường bao (`prop_fence_*`), Cây cối (`prop_tree_*`), Thú cưng (`prop_pet_*` kèm animation `Idle`/`Jump`), Biển hiệu (`prop_sign_*`).
 2. **Biểu tượng Ngành hàng (`public/games/classcity/models/topper_*.glb`):** Bánh kem, Cốc cà phê, Sách mở, Đầu mèo, Tay cầm game.
